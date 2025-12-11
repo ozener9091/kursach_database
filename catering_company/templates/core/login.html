@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Вход в систему{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0">🔐 Вход в систему</h4>
+            </div>
+            <div class="card-body p-4">
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    Неверное имя пользователя или пароль.
+                </div>
+                {% endif %}
+                
+                {% if next %}
+                    {% if user.is_authenticated %}
+                    <div class="alert alert-warning">
+                        У вашей учетной записи нет доступа к этой странице.
+                    </div>
+                    {% endif %}
+                {% endif %}
+                
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">👤 Имя пользователя</label>
+                        <input type="text" name="username" class="form-control form-control-lg" 
+                               id="id_username" required autofocus>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="id_password" class="form-label">🔒 Пароль</label>
+                        <input type="password" name="password" class="form-control form-control-lg" 
+                               id="id_password" required>
+                    </div>
+                    
+                    <input type="hidden" name="next" value="{{ next }}">
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            Войти в систему
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="text-muted mb-2">Тестовые пользователи:</p>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted d-block">👑 Директор</small>
+                            <code>director / test123</code>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">📊 Менеджер</small>
+                            <code>manager / test123</code>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <small class="text-muted d-block">👨‍🍳 Шеф-повар</small>
+                            <code>chef / test123</code>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <small class="text-muted d-block">👥 HR менеджер</small>
+                            <code>hr_manager / test123</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

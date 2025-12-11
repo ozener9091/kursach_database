@@ -1,0 +1,333 @@
+<!-- templates/core/table_list.html -->
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}{{ table_title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item">
+                {% if user.groups.first.name == 'Директор' %}
+                <a href="{% url 'director_tables' %}">Все таблицы</a>
+                {% elif user.groups.first.name == 'Менеджер' %}
+                <a href="{% url 'manager_tables' %}">Таблицы менеджера</a>
+                {% elif user.groups.first.name == 'Шеф-повар' %}
+                <a href="{% url 'chef_tables' %}">Таблицы шеф-повара</a>
+                {% elif user.groups.first.name == 'Менеджер по кадрам' %}
+                <a href="{% url 'hr_tables' %}">Таблицы HR</a>
+                {% endif %}
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ table_title }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">{{ table_title }}</h1>
+            <p class="text-muted mb-0">
+                Всего записей: <strong>{{ page_obj.paginator.count }}</strong>
+                {% if page_obj.paginator.num_pages > 1 %}
+                | Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="btn-group">
+            {% if has_add_permission %}
+            <a href="{% url 'admin:core_'|add:model_name|add:'_add' %}" class="btn btn-success">
+                ➕ Добавить
+            </a>
+            {% endif %}
+            <a href="
+                {% if user.groups.first.name == 'Директор' %}{% url 'director_tables' %}
+                {% elif user.groups.first.name == 'Менеджер' %}{% url 'manager_tables' %}
+                {% elif user.groups.first.name == 'Шеф-повар' %}{% url 'chef_tables' %}
+                {% elif user.groups.first.name == 'Менеджер по кадрам' %}{% url 'hr_tables' %}
+                {% else %}{% url 'dashboard' %}{% endif %}" 
+                class="btn btn-outline-secondary">
+                ← Назад к таблицам
+            </a>
+        </div>
+    </div>
+
+    <!-- Поиск и фильтры -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Поиск по таблице..." value="{{ request.GET.search|default:'' }}">
+                        <button type="submit" class="btn btn-primary">
+                            🔍 Поиск
+                        </button>
+                        {% if request.GET.search %}
+                        <a href="?" class="btn btn-outline-secondary">Очистить</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <select name="per_page" class="form-select" onchange="this.form.submit()">
+                            <option value="10" {% if not request.GET.per_page or request.GET.per_page == '10' %}selected{% endif %}>10 на странице</option>
+                            <option value="20" {% if request.GET.per_page == '20' %}selected{% endif %}>20 на странице</option>
+                            <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50 на странице</option>
+                            <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100 на странице</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Таблица -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">#</th>
+                            {% for field in fields_to_display %}
+                            <th>
+                                {% with field_name=field %}
+                                    {% if field_name == 'name' %}Название
+                                    {% elif field_name == 'price' %}Цена
+                                    {% elif field_name == 'output' %}Выход
+                                    {% elif field_name == 'assortment_group' %}Группа ассортимента
+                                    {% elif field_name == 'unit_of_measurement' %}Единица измерения
+                                    {% elif field_name == 'gross_weight' %}Вес брутто
+                                    {% elif field_name == 'net_weight' %}Вес нетто
+                                    {% elif field_name == 'purchase_price' %}Закупочная цена
+                                    {% elif field_name == 'price_premium' %}Надбавка %
+                                    {% elif field_name == 'remaining_stock' %}Остаток
+                                    {% elif field_name == 'provider' %}Поставщик
+                                    {% elif field_name == 'director_last_name' %}Фамилия руководителя
+                                    {% elif field_name == 'director_first_name' %}Имя руководителя
+                                    {% elif field_name == 'abbreviation' %}Аббревиатура
+                                    {% elif field_name == 'city' %}Город
+                                    {% elif field_name == 'bank' %}Банк
+                                    {% elif field_name == 'last_name' %}Фамилия
+                                    {% elif field_name == 'first_name' %}Имя
+                                    {% elif field_name == 'middle_name' %}Отчество
+                                    {% elif field_name == 'position' %}Должность
+                                    {% elif field_name == 'gender' %}Пол
+                                    {% elif field_name == 'birthday_date' %}Дата рождения
+                                    {% elif field_name == 'date' %}Дата
+                                    {% elif field_name == 'division' %}Подразделение
+                                    {% elif field_name == 'employee' %}Сотрудник
+                                    {% elif field_name == 'event_date' %}Дата события
+                                    {% elif field_name == 'event_type' %}Тип события
+                                    {% elif field_name == 'place_of_work' %}Место работы
+                                    {% elif field_name == 'profession' %}Профессия
+                                    {% elif field_name == 'bank_identification_code' %}БИК
+                                    {% elif field_name == 'taxpayer_identification_number' %}ИНН
+                                    {% elif field_name == 'code' %}Код
+                                    {% else %}{{ field_name|title|replace:"_| " }}
+                                    {% endif %}
+                                {% endwith %}
+                            </th>
+                            {% endfor %}
+                            {% if has_change_permission or has_delete_permission %}
+                            <th width="120" class="text-end">Действия</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for object in object_list %}
+                        <tr>
+                            <td class="text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                            {% for field in fields_to_display %}
+                            <td>
+                                {% with value=object|get_attribute:field %}
+                                    {% if value|is_foreign_key %}
+                                        <span class="text-primary" title="Связанный объект">
+                                            {{ value|truncatechars:30 }}
+                                        </span>
+                                    {% elif value|is_date %}
+                                        {{ value|date:"d.m.Y H:i" }}
+                                    {% elif value|is_boolean %}
+                                        {% if value %}✅{% else %}❌{% endif %}
+                                    {% elif field == 'image' and value %}
+                                        <img src="{{ value.url }}" alt="" style="max-height: 30px;" class="img-thumbnail">
+                                    {% elif field == 'price' or field == 'purchase_price' or field == 'price_premium' %}
+                                        {{ value }} ₽
+                                    {% elif field == 'output' or field == 'gross_weight' or field == 'net_weight' or field == 'remaining_stock' %}
+                                        {{ value }}
+                                    {% else %}
+                                        {{ value|default:"—"|truncatechars:50 }}
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            {% endfor %}
+                            {% if has_change_permission or has_delete_permission %}
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    {% if has_change_permission %}
+                                    <a href="{% url 'admin:core_'|add:model_name|add:'_change' object.id %}" 
+                                       class="btn btn-outline-warning" title="Изменить">
+                                        ✏️
+                                    </a>
+                                    {% endif %}
+                                    {% if has_delete_permission %}
+                                    <a href="{% url 'admin:core_'|add:model_name|add:'_delete' object.id %}" 
+                                       class="btn btn-outline-danger" title="Удалить">
+                                        🗑️
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ fields_to_display|length|add:2 }}" class="text-center py-5">
+                                <div class="text-muted">
+                                    <div class="display-4 mb-3">📭</div>
+                                    <h5>Таблица пуста</h5>
+                                    <p>Нет записей для отображения</p>
+                                    {% if has_add_permission %}
+                                    <a href="{% url 'admin:core_'|add:model_name|add:'_add' %}" class="btn btn-primary mt-2">
+                                        ➕ Добавить первую запись
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Пагинация -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Навигация по страницам">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            « Первая
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            ← Назад
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            Вперед →
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            Последняя »
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <p class="text-center text-muted small mt-2 mb-0">
+                    Показано {{ page_obj.start_index }}–{{ page_obj.end_index }} из {{ page_obj.paginator.count }} записей
+                </p>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Информация о правах -->
+    <div class="alert alert-light mt-4">
+        <div class="row">
+            <div class="col-md-3 text-center">
+                <h6>📋 Просмотр</h6>
+                <div class="display-6 text-success">
+                    ✅
+                </div>
+                <small class="text-muted">Разрешено</small>
+            </div>
+            <div class="col-md-3 text-center">
+                <h6>➕ Добавление</h6>
+                <div class="display-6 {% if has_add_permission %}text-success{% else %}text-muted{% endif %}">
+                    {% if has_add_permission %}✅{% else %}❌{% endif %}
+                </div>
+                <small class="text-muted">
+                    {% if has_add_permission %}Разрешено{% else %}Запрещено{% endif %}
+                </small>
+            </div>
+            <div class="col-md-3 text-center">
+                <h6>✏️ Изменение</h6>
+                <div class="display-6 {% if has_change_permission %}text-success{% else %}text-muted{% endif %}">
+                    {% if has_change_permission %}✅{% else %}❌{% endif %}
+                </div>
+                <small class="text-muted">
+                    {% if has_change_permission %}Разрешено{% else %}Запрещено{% endif %}
+                </small>
+            </div>
+            <div class="col-md-3 text-center">
+                <h6>🗑️ Удаление</h6>
+                <div class="display-6 {% if has_delete_permission %}text-success{% else %}text-muted{% endif %}">
+                    {% if has_delete_permission %}✅{% else %}❌{% endif %}
+                </div>
+                <small class="text-muted">
+                    {% if has_delete_permission %}Разрешено{% else %}Запрещено{% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Быстрые действия -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            ← Назад в панель управления
+        </a>
+        {% if user.is_staff %}
+        <a href="{% url 'admin:index' %}" class="btn btn-outline-primary">
+            ⚙️ Перейти в админку
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Включение tooltip'ов
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Подсветка строк таблицы при наведении
+    const tableRows = document.querySelectorAll('tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+});
+</script>
+{% endblock %}

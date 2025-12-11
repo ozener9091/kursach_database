@@ -143,6 +143,7 @@ class Dish(models.Model):
 
     unit_of_measurement = models.ForeignKey(
         'UnitOfMeasurement',
+        null=False,
         on_delete=models.CASCADE,
         verbose_name='Единицы измерения'
     )
@@ -396,7 +397,7 @@ class Delivery(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return self.date
+        return self.date.strftime('%d.%m.%Y %H:%M')
 
 
 class DeliveryProduct(models.Model):
@@ -424,7 +425,7 @@ class DeliveryProduct(models.Model):
         verbose_name_plural = 'Продукты в поставке'
 
     def __str__(self):
-        return self.quantity
+        return f"{self.product.name} - {self.quantity}"
 
 
 class Division(models.Model):
@@ -462,7 +463,7 @@ class Request(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return self.date
+        return self.date.strftime('%d.%m.%Y %H:%M')
 
 
 class RequestProduct(models.Model):
@@ -492,7 +493,7 @@ class RequestProduct(models.Model):
         verbose_name_plural = 'Продукты в заявке'
 
     def __str__(self):
-        return self.quantity
+        return f"{self.product.name} - {self.quantity}"
 
 
 class Report(models.Model):
@@ -508,7 +509,7 @@ class Report(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return self.date
+        return self.date.strftime('%d.%m.%Y %H:%M')
 
 
 class ReportDish(models.Model):
@@ -538,7 +539,7 @@ class ReportDish(models.Model):
         verbose_name_plural = 'Блюда в отчёте'
 
     def __str__(self):
-        return self.quantity
+        return f"{self.dish.name} - {self.quantity}"
 
 
 class Position(models.Model):
@@ -807,5 +808,7 @@ class WorkBook(models.Model):
         ordering = ['-event_date']
 
     def __str__(self):
-        return self.event_date
+        if self.event_date:
+            return f"{self.employee.last_name} - {self.event_date.strftime('%d.%m.%Y')}"
+        return f"{self.employee.last_name} - запись"
 

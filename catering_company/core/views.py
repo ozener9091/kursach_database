@@ -1,3 +1,495 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.views.generic import ListView, DetailView
+from django.db.models import Q
+from .models import *
+from .permissions import *
+from .decorators import *
 
-# Create your views here.
+@login_required
+def home(request):
+    return render(request, 'core/home.html', {'title': 'Главная страница'})
+
+@login_required
+def dashboard(request):
+    context = {
+        'title': 'Панель управления',
+        'user': request.user,
+        'dish_count': Dish.objects.count(),
+        'employee_count': Employee.objects.count(),
+        'product_count': Product.objects.count(),
+        'delivery_count': Delivery.objects.count(),
+        'request_count': Request.objects.count(),
+        'provider_count': Provider.objects.count(),
+        'report_count': Report.objects.count(),
+    }
+    
+    return render(request, 'core/dashboard.html', context)
+
+
+class TableListView(LoginRequiredMixin, ListView):
+    """Базовый класс для отображения таблиц"""
+    template_name = 'core/table_list.html'
+    paginate_by = 20
+    model = None
+    table_title = ''
+    fields_to_display = []
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['table_title'] = self.table_title
+        context['fields_to_display'] = self.fields_to_display
+        context['model_name'] = self.model._meta.model_name if self.model else ''
+        context['has_add_permission'] = self.request.user.has_perm(f'core.add_{self.model._meta.model_name}')
+        context['has_change_permission'] = self.request.user.has_perm(f'core.change_{self.model._meta.model_name}')
+        context['has_delete_permission'] = self.request.user.has_perm(f'core.delete_{self.model._meta.model_name}')
+        return context
+    
+    def get_queryset(self):
+        # Базовый queryset - все объекты
+        return self.model.objects.all()
+
+
+# ====== Views для каждой роли ======
+
+@login_required
+def director_tables(request):
+    """Список всех таблиц для директора"""
+    if not request.user.groups.filter(name='Директор').exists() and not request.user.is_superuser:
+        from django.contrib import messages
+        messages.error(request, 'У вас нет доступа к этой странице')
+        return redirect('dashboard')
+    
+    # Все модели приложения core
+    from django.apps import apps
+    app_models = apps.get_app_config('core').get_models()
+    
+    tables = []
+    for model in app_models:
+        model_name = model._meta.model_name
+        verbose_name = model._meta.verbose_name_plural
+        
+        # Пропускаем абстрактные модели и модели без объектов
+        if model_name in ['abbreviationtype', 'gendertype', 'eventtype']:
+            continue
+            
+        try:
+            count = model.objects.count()
+        except:
+            count = 0
+        
+        # Формируем имя URL
+        url_name = f'table_{model_name}'
+        
+        tables.append({
+            'name': model_name,
+            'verbose_name': verbose_name,
+            'count': count,
+            'url': url_name,
+            'has_view': request.user.has_perm(f'core.view_{model_name}'),
+        })
+    
+    return render(request, 'core/role_tables.html', {
+        'title': 'Все таблицы',
+        'role': 'Директор',
+        'tables': sorted(tables, key=lambda x: x['verbose_name']),
+        'description': 'Полный доступ ко всем таблицам системы'
+    })
+
+@login_required
+def manager_tables(request):
+    """Список таблиц для менеджера"""
+    # Проверяем доступ
+    if not request.user.groups.filter(name='Менеджер').exists() and not request.user.is_superuser:
+        # Проверяем, может пользователь директор?
+        if not request.user.groups.filter(name='Директор').exists():
+            from django.contrib import messages
+            messages.error(request, 'У вас нет доступа к этой странице')
+            return redirect('dashboard')
+    
+    # Таблицы для менеджера
+    manager_models = [
+        ('dish', 'Блюда', Dish),
+        ('ingredient', 'Ингредиенты', Ingredient),
+        ('request', 'Заявки', Request),
+        ('requestproduct', 'Продукты в заявках', RequestProduct),
+        ('delivery', 'Поставки', Delivery),
+        ('deliveryproduct', 'Продукты в поставках', DeliveryProduct),
+        ('product', 'Продукты', Product),
+        ('provider', 'Поставщики', Provider),
+        ('report', 'Отчеты', Report),
+        ('reportdish', 'Блюда в отчетах', ReportDish),
+        ('bank', 'Банки', Bank),
+        ('division', 'Подразделения', Division),
+    ]
+    
+    tables = []
+    for model_name, verbose_name, model in manager_models:
+        try:
+            count = model.objects.count()
+            url_name = f'table_{model_name}'
+            
+            tables.append({
+                'name': model_name,
+                'verbose_name': verbose_name,
+                'count': count,
+                'url': url_name,
+                'has_view': request.user.has_perm(f'core.view_{model_name}'),
+            })
+        except:
+            continue
+    
+    # Добавляем справочники
+    reference_models = [
+        ('country', 'Страны', Country),
+        ('city', 'Города', City),
+        ('street', 'Улицы', Street),
+        ('unitofmeasurement', 'Единицы измерения', UnitOfMeasurement),
+        ('assortmentgroup', 'Группы ассортимента', AssortmentGroup),
+    ]
+    
+    for model_name, verbose_name, model in reference_models:
+        try:
+            count = model.objects.count()
+            url_name = f'table_{model_name}'
+            
+            tables.append({
+                'name': model_name,
+                'verbose_name': verbose_name,
+                'count': count,
+                'url': url_name,
+                'has_view': request.user.has_perm(f'core.view_{model_name}'),
+            })
+        except:
+            continue
+    
+    return render(request, 'core/role_tables.html', {
+        'title': 'Таблицы менеджера',
+        'role': 'Менеджер',
+        'tables': sorted(tables, key=lambda x: x['verbose_name']),
+        'description': 'Управление меню, поставками и заявками'
+    })
+
+@login_required
+def chef_tables(request):
+    """Список таблиц для шеф-повара"""
+    # Проверяем доступ
+    if not request.user.groups.filter(name='Шеф-повар').exists() and not request.user.is_superuser:
+        # Проверяем, может пользователь директор?
+        if not request.user.groups.filter(name='Директор').exists():
+            from django.contrib import messages
+            messages.error(request, 'У вас нет доступа к этой странице')
+            return redirect('dashboard')
+    
+    # Таблицы для шеф-повара
+    chef_models = [
+        ('dish', 'Блюда', Dish),
+        ('product', 'Продукты', Product),
+        ('ingredient', 'Ингредиенты', Ingredient),
+    ]
+    
+    tables = []
+    for model_name, verbose_name, model in chef_models:
+        try:
+            count = model.objects.count()
+            url_name = f'table_{model_name}'
+            
+            tables.append({
+                'name': model_name,
+                'verbose_name': verbose_name,
+                'count': count,
+                'url': url_name,
+                'has_view': request.user.has_perm(f'core.view_{model_name}'),
+            })
+        except:
+            continue
+    
+    # Справочники
+    reference_models = [
+        ('assortmentgroup', 'Группы ассортимента', AssortmentGroup),
+        ('unitofmeasurement', 'Единицы измерения', UnitOfMeasurement),
+        ('country', 'Страны', Country),
+        ('city', 'Города', City),
+        ('street', 'Улицы', Street),
+    ]
+    
+    for model_name, verbose_name, model in reference_models:
+        try:
+            count = model.objects.count()
+            url_name = f'table_{model_name}'
+            
+            tables.append({
+                'name': model_name,
+                'verbose_name': verbose_name,
+                'count': count,
+                'url': url_name,
+                'has_view': request.user.has_perm(f'core.view_{model_name}'),
+            })
+        except:
+            continue
+    
+    return render(request, 'core/role_tables.html', {
+        'title': 'Таблицы шеф-повара',
+        'role': 'Шеф-повар',
+        'tables': sorted(tables, key=lambda x: x['verbose_name']),
+        'description': 'Просмотр меню и продуктов, редактирование ингредиентов'
+    })
+
+@login_required
+def hr_tables(request):
+    """Список таблиц для менеджера по кадрам"""
+    # Проверяем доступ
+    if not request.user.groups.filter(name='Менеджер по кадрам').exists() and not request.user.is_superuser:
+        # Проверяем, может пользователь директор?
+        if not request.user.groups.filter(name='Директор').exists():
+            from django.contrib import messages
+            messages.error(request, 'У вас нет доступа к этой странице')
+            return redirect('dashboard')
+    
+    # Таблицы для HR
+    hr_models = [
+        ('employee', 'Сотрудники', Employee),
+        ('position', 'Должности', Position),
+        ('placeofwork', 'Места работы', PlaceOfWork),
+        ('department', 'Подразделения', Department),
+        ('profession', 'Профессии', Profession),
+        ('specialization', 'Специализации', Specialization),
+        ('classification', 'Классификации', Classification),
+        ('workbook', 'Трудовые книжки', WorkBook),
+    ]
+    
+    tables = []
+    for model_name, verbose_name, model in hr_models:
+        try:
+            count = model.objects.count()
+            url_name = f'table_{model_name}'
+            
+            tables.append({
+                'name': model_name,
+                'verbose_name': verbose_name,
+                'count': count,
+                'url': url_name,
+                'has_view': request.user.has_perm(f'core.view_{model_name}'),
+            })
+        except:
+            continue
+    
+    # Справочники
+    reference_models = [
+        ('country', 'Страны', Country),
+        ('city', 'Города', City),
+        ('street', 'Улицы', Street),
+    ]
+    
+    for model_name, verbose_name, model in reference_models:
+        try:
+            count = model.objects.count()
+            url_name = f'table_{model_name}'
+            
+            tables.append({
+                'name': model_name,
+                'verbose_name': verbose_name,
+                'count': count,
+                'url': url_name,
+                'has_view': request.user.has_perm(f'core.view_{model_name}'),
+            })
+        except:
+            continue
+    
+    return render(request, 'core/role_tables.html', {
+        'title': 'Таблицы менеджера по кадрам',
+        'role': 'Менеджер по кадрам',
+        'tables': sorted(tables, key=lambda x: x['verbose_name']),
+        'description': 'Управление персоналом и кадровыми данными'
+    })
+
+
+# ====== Конкретные представления для каждой таблицы ======
+
+# Блюда
+class DishListView(TableListView):
+    model = Dish
+    table_title = 'Блюда'
+    fields_to_display = ['name', 'price', 'output', 'assortment_group', 'unit_of_measurement']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Добавляем поиск
+        search = self.request.GET.get('search', '')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(description__icontains=search)
+            )
+        return queryset.select_related('assortment_group', 'unit_of_measurement')
+
+# Ингредиенты
+class IngredientListView(TableListView):
+    model = Ingredient
+    table_title = 'Ингредиенты'
+    fields_to_display = ['name', 'gross_weight', 'net_weight']
+
+# Продукты
+class ProductListView(TableListView):
+    model = Product
+    table_title = 'Продукты'
+    fields_to_display = ['name', 'purchase_price', 'price_premium', 'remaining_stock', 'provider', 'unit_of_measurement']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('provider', 'unit_of_measurement')
+
+# Поставщики
+class ProviderListView(TableListView):
+    model = Provider
+    table_title = 'Поставщики'
+    fields_to_display = ['name', 'abbreviation', 'director_last_name', 'city', 'bank']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('city', 'bank', 'country', 'street')
+
+# Сотрудники
+class EmployeeListView(TableListView):
+    model = Employee
+    table_title = 'Сотрудники'
+    fields_to_display = ['last_name', 'first_name', 'middle_name', 'position', 'gender', 'birthday_date']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('position', 'country', 'city', 'street')
+
+# Поставки
+class DeliveryListView(TableListView):
+    model = Delivery
+    table_title = 'Поставки'
+    fields_to_display = ['date', 'provider']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('provider')
+
+# Заявки
+class RequestListView(TableListView):
+    model = Request
+    table_title = 'Заявки'
+    fields_to_display = ['date', 'division']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('division')
+
+# Отчеты
+class ReportListView(TableListView):
+    model = Report
+    table_title = 'Отчеты'
+    fields_to_display = ['date']
+
+# Должности
+class PositionListView(TableListView):
+    model = Position
+    table_title = 'Должности'
+    fields_to_display = ['name', 'code']
+
+# Трудовые книжки
+class WorkBookListView(TableListView):
+    model = WorkBook
+    table_title = 'Трудовые книжки'
+    fields_to_display = ['employee', 'event_date', 'event_type', 'place_of_work', 'profession']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('employee', 'place_of_work', 'profession', 
+                                                    'department', 'specialization', 'classification')
+
+# Справочники
+class CountryListView(TableListView):
+    model = Country
+    table_title = 'Страны'
+    fields_to_display = ['name']
+
+class CityListView(TableListView):
+    model = City
+    table_title = 'Города'
+    fields_to_display = ['name']
+
+class StreetListView(TableListView):
+    model = Street
+    table_title = 'Улицы'
+    fields_to_display = ['name']
+
+class UnitOfMeasurementListView(TableListView):
+    model = UnitOfMeasurement
+    table_title = 'Единицы измерения'
+    fields_to_display = ['name']
+
+class AssortmentGroupListView(TableListView):
+    model = AssortmentGroup
+    table_title = 'Группы ассортимента'
+    fields_to_display = ['name']
+
+class BankListView(TableListView):
+    model = Bank
+    table_title = 'Банки'
+    fields_to_display = ['name', 'bank_identification_code', 'taxpayer_identification_number']
+
+# Отчеты по блюдам
+class ReportDishListView(TableListView):
+    model = ReportDish
+    table_title = 'Блюда в отчетах'
+    fields_to_display = ['report', 'dish', 'quantity']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('report', 'dish')
+
+# Продукты в заявках
+class RequestProductListView(TableListView):
+    model = RequestProduct
+    table_title = 'Продукты в заявках'
+    fields_to_display = ['request', 'product', 'quantity']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('request', 'product')
+
+# Продукты в поставках
+class DeliveryProductListView(TableListView):
+    model = DeliveryProduct
+    table_title = 'Продукты в поставках'
+    fields_to_display = ['delivery', 'product', 'quantity']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('delivery', 'product')
+
+# Места работы
+class PlaceOfWorkListView(TableListView):
+    model = PlaceOfWork
+    table_title = 'Места работы'
+    fields_to_display = ['name', 'country', 'city', 'street']
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related('country', 'city', 'street')
+
+# Подразделения предприятия
+class DepartmentListView(TableListView):
+    model = Department
+    table_title = 'Структурные подразделения'
+    fields_to_display = ['name']
+
+# Профессии
+class ProfessionListView(TableListView):
+    model = Profession
+    table_title = 'Профессии'
+    fields_to_display = ['name']
+
+# Специализации
+class SpecializationListView(TableListView):
+    model = Specialization
+    table_title = 'Специализации'
+    fields_to_display = ['name']
+
+# Классификации
+class ClassificationListView(TableListView):
+    model = Classification
+    table_title = 'Классификации'
+    fields_to_display = ['name']
+
+# Подразделения (Division)
+class DivisionListView(TableListView):
+    model = Division
+    table_title = 'Подразделения предприятия'
+    fields_to_display = ['name']

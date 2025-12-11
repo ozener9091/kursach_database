@@ -1,0 +1,156 @@
+<!-- templates/core/role_tables.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">{{ title }}</h1>
+            <p class="text-muted mb-0">{{ description }}</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+            {% if user.is_superuser or user.groups.first.name == 'Директор' %}
+            <a href="{% url 'admin:index' %}" class="btn btn-outline-primary">
+                ⚙️ Админ-панель
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <div class="d-flex align-items-center">
+            <div class="me-3">👤</div>
+            <div>
+                <strong>Роль:</strong> {{ role }} |
+                <strong>Пользователь:</strong> {{ user.username }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for table in tables %}
+        {% if table.has_view %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title mb-0">{{ table.verbose_name }}</h5>
+                        <span class="badge bg-secondary">{{ table.count }}</span>
+                    </div>
+                    
+                    <p class="card-text text-muted small mb-3">
+                        {% if table.name == 'dish' %}🍽️ Блюда и рецепты
+                        {% elif table.name == 'ingredient' %}🥕 Ингредиенты блюд
+                        {% elif table.name == 'employee' %}👥 Данные сотрудников
+                        {% elif table.name == 'product' %}📦 Продукты на складе
+                        {% elif table.name == 'delivery' %}🚚 Поставки продуктов
+                        {% elif table.name == 'request' %}📝 Заявки на продукты
+                        {% elif table.name == 'report' %}📊 Отчеты по реализации
+                        {% elif table.name == 'reportdish' %}🍽️ Блюда в отчетах
+                        {% elif table.name == 'requestproduct' %}📦 Продукты в заявках
+                        {% elif table.name == 'deliveryproduct' %}📦 Продукты в поставках
+                        {% elif table.name == 'position' %}💼 Должности сотрудников
+                        {% elif table.name == 'workbook' %}📘 Трудовые книжки
+                        {% elif table.name == 'placeofwork' %}🏢 Места работы
+                        {% elif table.name == 'department' %}🏢 Подразделения
+                        {% elif table.name == 'profession' %}🎓 Профессии
+                        {% elif table.name == 'specialization' %}🎯 Специализации
+                        {% elif table.name == 'classification' %}📊 Классификации
+                        {% elif table.name == 'division' %}📁 Подразделения предприятия
+                        {% elif table.name == 'provider' %}🏭 Поставщики
+                        {% elif table.name == 'bank' %}🏦 Банки
+                        {% elif table.name == 'country' %}🌍 Страны
+                        {% elif table.name == 'city' %}🏙️ Города
+                        {% elif table.name == 'street' %}🛣️ Улицы
+                        {% elif table.name == 'unitofmeasurement' %}📏 Единицы измерения
+                        {% elif table.name == 'assortmentgroup' %}📁 Группы ассортимента
+                        {% else %}📋 Справочная информация{% endif %}
+                    </p>
+                    
+                    <div class="d-grid gap-2">
+                        <!-- Проверяем существование URL перед созданием ссылки -->
+                        {% url table.url as table_url %}
+                        {% if table_url %}
+                        <a href="{{ table_url }}" class="btn btn-outline-primary">
+                            📋 Просмотреть таблицу
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled title="Таблица временно недоступна">
+                            📋 Просмотреть таблицу
+                        </button>
+                        {% endif %}
+                        
+                        <!-- Ссылка на добавление в админке -->
+                        {% if user.has_perm|add:'core.add_'|add:table.name %}
+                        <a href="{% url 'admin:core_'|add:table.name|add:'_add' %}" class="btn btn-outline-success btn-sm">
+                            ➕ Добавить запись
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-top-0 pt-0">
+                    <small class="text-muted">
+                        {% if user.has_perm|add:'core.add_'|add:table.name %}
+                        <span class="text-success">➕ Добавление</span>
+                        {% endif %}
+                        {% if user.has_perm|add:'core.change_'|add:table.name %}
+                        <span class="text-warning">✏️ Изменение</span>
+                        {% endif %}
+                        {% if user.has_perm|add:'core.delete_'|add:table.name %}
+                        <span class="text-danger">🗑️ Удаление</span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h5>⚠️ Нет доступных таблиц</h5>
+                <p>Для вашей роли не назначены права на просмотр таблиц.</p>
+                <p>Обратитесь к администратору для назначения прав.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">ℹ️ Информация о правах доступа</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 text-center">
+                    <div class="display-6 text-success">➕</div>
+                    <small>Добавление записей</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="display-6 text-primary">📋</div>
+                    <small>Просмотр записей</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="display-6 text-warning">✏️</div>
+                    <small>Изменение записей</small>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="display-6 text-danger">🗑️</div>
+                    <small>Удаление записей</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

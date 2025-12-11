@@ -83,7 +83,7 @@
                         <!-- Проверяем существование URL перед созданием ссылки -->
                         {% url table.url as table_url %}
                         {% if table_url %}
-                        <a href="{{ table_url }}" class="btn btn-outline-primary">
+                        <a href="{% url 'table_'|add:table.name %}" class="btn btn-outline-primary">
                             📋 Просмотреть таблицу
                         </a>
                         {% else %}

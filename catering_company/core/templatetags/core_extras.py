@@ -6,6 +6,27 @@ import datetime
 register = template.Library()
 
 @register.filter
+def get_display_method(obj, field_name):
+    """Получает значение метода get_FIELD_display"""
+    try:
+        method_name = f'get_{field_name}_display'
+        if hasattr(obj, method_name):
+            method = getattr(obj, method_name)
+            if callable(method):
+                return method()
+    except:
+        pass
+    return None
+
+@register.filter
+def get_verbose_name(obj, field_name):
+    """Получает человекочитаемое имя поля"""
+    try:
+        return obj._meta.get_field(field_name).verbose_name
+    except:
+        return field_name.replace('_', ' ').title()
+
+@register.filter
 def get_attribute(obj, attr_name):
     """Получает значение атрибута объекта, включая связанные объекты"""
     try:

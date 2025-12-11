@@ -305,6 +305,138 @@ def hr_tables(request):
     })
 
 
+class UniversalTableView(LoginRequiredMixin, ListView):
+    """Универсальный View для отображения всех таблиц"""
+    template_name = 'core/universal_table.html'
+    paginate_by = 20
+    model = None
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        if self.model:
+            # Получаем название таблицы
+            context['table_title'] = self.model._meta.verbose_name_plural
+            
+            # Получаем все поля модели, кроме id и полей ManyToMany
+            fields = []
+            for field in self.model._meta.get_fields():
+                # Исключаем:
+                # 1. Поля ManyToMany (они отображаются через related_name)
+                # 2. Поле id (автоинкремент)
+                # 3. Обратные связи
+                if (not field.auto_created and 
+                    field.name != 'id' and 
+                    not field.many_to_many and
+                    not isinstance(field, models.ManyToManyField)):
+                    
+                    # Для ForeignKey получаем связанный объект
+                    if isinstance(field, models.ForeignKey):
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'foreign_key',
+                            'related_model': field.related_model,
+                        })
+                    # Для DateTimeField
+                    elif isinstance(field, models.DateTimeField):
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'datetime',
+                        })
+                    # Для DateField
+                    elif isinstance(field, models.DateField):
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'date',
+                        })
+                    # Для BooleanField
+                    elif isinstance(field, models.BooleanField):
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'boolean',
+                        })
+                    # Для ImageField/FileField
+                    elif isinstance(field, models.ImageField) or isinstance(field, models.FileField):
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'image',
+                        })
+                    # Для DecimalField
+                    elif isinstance(field, models.DecimalField):
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'decimal',
+                            'max_digits': field.max_digits,
+                            'decimal_places': field.decimal_places,
+                        })
+                    # Для ChoiceField
+                    elif field.choices:
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'choice',
+                        })
+                    # Для остальных полей (CharField, TextField и т.д.)
+                    else:
+                        fields.append({
+                            'name': field.name,
+                            'verbose_name': field.verbose_name,
+                            'type': 'text',
+                        })
+            
+            context['fields'] = fields
+            context['model_name'] = self.model._meta.model_name
+            
+            # Проверяем права доступа
+            context['has_add_permission'] = self.request.user.has_perm(f'core.add_{self.model._meta.model_name}')
+            context['has_change_permission'] = self.request.user.has_perm(f'core.change_{self.model._meta.model_name}')
+            context['has_delete_permission'] = self.request.user.has_perm(f'core.delete_{self.model._meta.model_name}')
+            
+            # Для ManyToMany полей (отдельно)
+            m2m_fields = []
+            for field in self.model._meta.get_fields():
+                if isinstance(field, models.ManyToManyField):
+                    m2m_fields.append({
+                        'name': field.name,
+                        'verbose_name': field.verbose_name,
+                    })
+            context['m2m_fields'] = m2m_fields
+        
+        return context
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Применяем поиск
+        search = self.request.GET.get('search', '')
+        if search and self.model:
+            # Создаем Q-объект для поиска по текстовым полям
+            from django.db.models import Q
+            
+            # Получаем текстовые поля модели
+            text_fields = []
+            for field in self.model._meta.get_fields():
+                if (isinstance(field, models.CharField) or 
+                    isinstance(field, models.TextField)):
+                    text_fields.append(field.name)
+            
+            # Создаем условия поиска
+            q_objects = Q()
+            for field_name in text_fields:
+                q_objects |= Q(**{f'{field_name}__icontains': search})
+            
+            if text_fields:
+                queryset = queryset.filter(q_objects)
+        
+        return queryset
+
+
 # ====== Конкретные представления для каждой таблицы ======
 
 # Блюда

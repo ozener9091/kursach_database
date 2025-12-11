@@ -1,0 +1,337 @@
+<!-- templates/core/universal_table.html -->
+{% extends 'base.html' %}
+{% load core_extras %}
+
+{% block title %}{{ table_title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item">
+                {% if user.groups.first.name == 'Директор' %}
+                <a href="{% url 'director_tables' %}">Все таблицы</a>
+                {% elif user.groups.first.name == 'Менеджер' %}
+                <a href="{% url 'manager_tables' %}">Таблицы менеджера</a>
+                {% elif user.groups.first.name == 'Шеф-повар' %}
+                <a href="{% url 'chef_tables' %}">Таблицы шеф-повара</a>
+                {% elif user.groups.first.name == 'Менеджер по кадрам' %}
+                <a href="{% url 'hr_tables' %}">Таблицы HR</a>
+                {% endif %}
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ table_title }}</li>
+        </ol>
+    </nav>
+
+    <!-- Заголовок и кнопки -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1">{{ table_title }}</h1>
+            <p class="text-muted mb-0">
+                Всего записей: <strong>{{ page_obj.paginator.count }}</strong>
+                {% if page_obj.paginator.num_pages > 1 %}
+                | Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="btn-group">
+            {% if has_add_permission %}
+            <a href="{% url 'admin:core_'|add:model_name|add:'_add' %}" class="btn btn-success">
+                ➕ Добавить запись
+            </a>
+            {% endif %}
+            <a href="
+                {% if user.groups.first.name == 'Директор' %}{% url 'director_tables' %}
+                {% elif user.groups.first.name == 'Менеджер' %}{% url 'manager_tables' %}
+                {% elif user.groups.first.name == 'Шеф-повар' %}{% url 'chef_tables' %}
+                {% elif user.groups.first.name == 'Менеджер по кадрам' %}{% url 'hr_tables' %}
+                {% else %}{% url 'dashboard' %}{% endif %}" 
+                class="btn btn-outline-secondary">
+                ← Назад к таблицам
+            </a>
+        </div>
+    </div>
+
+    <!-- Поиск и фильтры -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Поиск по всем текстовым полям..." 
+                               value="{{ request.GET.search|default:'' }}">
+                        <button type="submit" class="btn btn-primary">
+                            🔍 Поиск
+                        </button>
+                        {% if request.GET.search %}
+                        <a href="?" class="btn btn-outline-secondary">Очистить</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <select name="per_page" class="form-select" onchange="this.form.submit()">
+                            <option value="10" {% if not request.GET.per_page or request.GET.per_page == '10' %}selected{% endif %}>10 записей</option>
+                            <option value="20" {% if request.GET.per_page == '20' %}selected{% endif %}>20 записей</option>
+                            <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50 записей</option>
+                            <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100 записей</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Таблица -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">#</th>
+                            {% for field in fields %}
+                            <th>
+                                {{ field.verbose_name|default:field.name|title }}
+                                <small class="text-muted d-block" style="font-size: 0.7em; font-weight: normal;">
+                                    {% if field.type == 'foreign_key' %}↔️ Связь
+                                    {% elif field.type == 'datetime' %}🕐 Дата/время
+                                    {% elif field.type == 'date' %}📅 Дата
+                                    {% elif field.type == 'boolean' %}✅ Да/Нет
+                                    {% elif field.type == 'image' %}🖼️ Изображение
+                                    {% elif field.type == 'decimal' %}💰 Число
+                                    {% elif field.type == 'choice' %}📋 Выбор
+                                    {% else %}📝 Текст{% endif %}
+                                </small>
+                            </th>
+                            {% endfor %}
+                            {% if has_change_permission or has_delete_permission %}
+                            <th width="120" class="text-end">Действия</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for object in object_list %}
+                        <tr>
+                            <td class="text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                            {% for field in fields %}
+                            <td>
+                                {% with value=object|get_attribute:field.name %}
+                                    {% if field.type == 'foreign_key' and value %}
+                                        <span class="badge bg-primary" title="Связанный объект">
+                                            {{ value|truncatechars:30 }}
+                                        </span>
+                                    {% elif field.type == 'datetime' and value %}
+                                        {{ value|date:"d.m.Y H:i" }}
+                                    {% elif field.type == 'date' and value %}
+                                        {{ value|date:"d.m.Y" }}
+                                    {% elif field.type == 'boolean' %}
+                                        {% if value %}✅ Да{% else %}❌ Нет{% endif %}
+                                    {% elif field.type == 'image' and value %}
+                                        <img src="{{ value.url }}" alt="" style="max-height: 40px;" class="img-thumbnail">
+                                    {% elif field.type == 'decimal' and value is not None %}
+                                        {% if field.name == 'price' or field.name == 'purchase_price' %}
+                                            {{ value }} ₽
+                                        {% elif field.name == 'price_premium' %}
+                                            {{ value }}%
+                                        {% else %}
+                                            {{ value }}
+                                        {% endif %}
+                                    {% elif field.type == 'choice' and value %}
+                                        {% with display_method=field.name|add:'_display' %}
+                                            {% if object|get_attribute:display_method %}
+                                                {{ object|get_attribute:display_method }}
+                                            {% else %}
+                                                {{ value }}
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% elif value %}
+                                        {{ value|truncatechars:50 }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            {% endfor %}
+                            {% if has_change_permission or has_delete_permission %}
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    {% if has_change_permission %}
+                                    <a href="{% url 'admin:core_'|add:model_name|add:'_change' object.id %}" 
+                                       class="btn btn-outline-warning" title="Изменить">
+                                        ✏️
+                                    </a>
+                                    {% endif %}
+                                    {% if has_delete_permission %}
+                                    <a href="{% url 'admin:core_'|add:model_name|add:'_delete' object.id %}" 
+                                       class="btn btn-outline-danger" title="Удалить">
+                                        🗑️
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ fields|length|add:2 }}" class="text-center py-5">
+                                <div class="text-muted">
+                                    <div class="display-4 mb-3">📭</div>
+                                    <h5>Таблица пуста</h5>
+                                    <p>Нет записей для отображения</p>
+                                    {% if has_add_permission %}
+                                    <a href="{% url 'admin:core_'|add:model_name|add:'_add' %}" class="btn btn-primary mt-2">
+                                        ➕ Добавить первую запись
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Пагинация -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Навигация по страницам">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            « Первая
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            ← Назад
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            Вперед →
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                            Последняя »
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <p class="text-center text-muted small mt-2 mb-0">
+                    Показано {{ page_obj.start_index }}–{{ page_obj.end_index }} из {{ page_obj.paginator.count }} записей
+                </p>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Информация о таблице -->
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">ℹ️ Информация о таблице</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>📊 Структура таблицы:</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>Всего полей:</strong> {{ fields|length }}</li>
+                        <li><strong>Типы полей:</strong>
+                            {% regroup fields by type as field_types %}
+                            {% for type in field_types %}
+                            <span class="badge bg-secondary">{{ type.grouper }}: {{ type.list|length }}</span>
+                            {% endfor %}
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>🔑 Права доступа:</h6>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="display-6 {% if has_add_permission %}text-success{% else %}text-muted{% endif %}">
+                                {% if has_add_permission %}➕{% else %}❌{% endif %}
+                            </div>
+                            <small>Добавление</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="display-6 {% if has_change_permission %}text-success{% else %}text-muted{% endif %}">
+                                {% if has_change_permission %}✏️{% else %}❌{% endif %}
+                            </div>
+                            <small>Изменение</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="display-6 {% if has_delete_permission %}text-success{% else %}text-muted{% endif %}">
+                                {% if has_delete_permission %}🗑️{% else %}❌{% endif %}
+                            </div>
+                            <small>Удаление</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ManyToMany поля (если есть) -->
+    {% if m2m_fields %}
+    <div class="alert alert-info mt-4">
+        <h6>🔗 Связанные таблицы (ManyToMany):</h6>
+        <div class="row">
+            {% for field in m2m_fields %}
+            <div class="col-md-4 mb-2">
+                <span class="badge bg-info">{{ field.verbose_name }}</span>
+                <small class="text-muted">(связь многие-ко-многим)</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Подсветка строк таблицы
+    const tableRows = document.querySelectorAll('tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+            this.style.transition = 'background-color 0.3s';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+    
+    // Фиксированная ширина для столбца с действиями
+    const actionCells = document.querySelectorAll('td.text-end');
+    actionCells.forEach(cell => {
+        cell.style.minWidth = '120px';
+    });
+});
+</script>
+{% endblock %}

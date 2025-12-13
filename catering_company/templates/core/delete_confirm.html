@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Подтверждение удаления{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'table_'|add:model_name %}">{{ verbose_name|capfirst }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Подтверждение удаления</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">⚠️ Подтверждение удаления</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5>Вы уверены, что хотите удалить эту запись?</h5>
+                        <p class="mb-0">
+                            <strong>{{ object }}</strong>
+                        </p>
+                    </div>
+                    
+                    <p class="text-muted">
+                        <strong>Внимание:</strong> Это действие нельзя будет отменить. 
+                        Все связанные данные также могут быть удалены в зависимости от настроек системы.
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'table_'|add:model_name %}" class="btn btn-outline-secondary">
+                                ← Назад к таблице
+                            </a>
+                            <div class="btn-group">
+                                <a href="{% url 'table_'|add:model_name %}" class="btn btn-outline-secondary">
+                                    Отмена
+                                </a>
+                                <button type="submit" class="btn btn-danger">
+                                    🗑️ Удалить
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

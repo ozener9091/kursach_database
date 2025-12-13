@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}О программе{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'help' %}">❓ Справка</a></li>
+            <li class="breadcrumb-item active" aria-current="page">ℹ️ О программе</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>ℹ️ О программе</h1>
+        <div class="btn-group">
+            <a href="{% url 'help' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card text-center">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">🍽️ Система управления предприятием общественного питания</h2>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="display-1 text-primary mb-3">🍽️</div>
+                        <h3 class="card-title">Версия 1.0.0</h3>
+                        <p class="card-text text-muted">Дата выпуска: Декабрь 2025</p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">🏢 Информация о системе</h5>
+                                    <p class="card-text">
+                                        <strong>Название:</strong> Система управления предприятием общественного питания<br>
+                                        <strong>Тип:</strong> Веб-приложение<br>
+                                        <strong>Технологии:</strong> Python, Django, Bootstrap<br>
+                                        <strong>База данных:</strong> PostgreSQL/SQLite
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">👤 Разработчики</h5>
+                                    <p class="card-text">
+                                        <strong>Разработчик:</strong> [Ваше имя]<br>
+                                        <strong>Организация:</strong> [Название учебного заведения]<br>
+                                        <strong>Год:</strong> 2025
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">🎯 Назначение системы</h5>
+                            <p class="card-text">
+                                Система предназначена для автоматизации бизнес-процессов предприятия общественного питания, 
+                                включая управление меню, учет продуктов, контроль остатков, ведение кадрового учета, 
+                                формирование отчетов и другие операции.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">🛠️ Технические характеристики</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Язык программирования:</strong> Python 3.11+</p>
+                                    <p class="mb-1"><strong>Веб-фреймворк:</strong> Django 4.2+</p>
+                                    <p class="mb-1"><strong>СУБД:</strong> PostgreSQL/SQLite</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Интерфейс:</strong> Bootstrap 5</p>
+                                    <p class="mb-1"><strong>Аутентификация:</strong> Django Auth</p>
+                                    <p class="mb-1"><strong>Отчеты:</strong> Excel, SQL</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        Система разработана в рамках курсового проекта по дисциплине "Базы данных"
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

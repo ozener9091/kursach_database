@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+
+{% block title %}Аналитика{% endblock %}
+
+{% block extra_head %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    .export-buttons {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item active" aria-current="page">📈 Аналитика</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>📈 Дашборд аналитики</h1>
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">⚙️ Фильтры данных</h5>
+        </div>
+        <div class="card-body">
+            <form id="analytics-filters">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Начальная дата</label>
+                        <input type="date" class="form-control" name="start_date" id="start_date" value="{{ date_range.start }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Конечная дата</label>
+                        <input type="date" class="form-control" name="end_date" id="end_date" value="{{ date_range.end }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Период</label>
+                        <select class="form-select" id="time_period">
+                            <option value="7">Последние 7 дней</option>
+                            <option value="30" selected>Последние 30 дней</option>
+                            <option value="90">Последние 90 дней</option>
+                            <option value="365">Последний год</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="btn-group w-100">
+                            <button type="button" class="btn btn-primary" id="apply-filters">
+                                🔄 Применить
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="reset-filters">
+                                Сбросить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">🍽️ Блюда</h5>
+                            <h2 class="card-text">{{ available_data.dish_count|default:0 }}</h2>
+                        </div>
+                        <div class="display-5">🍽️</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">📦 Продукты</h5>
+                            <h2 class="card-text">{{ available_data.product_count|default:0 }}</h2>
+                        </div>
+                        <div class="display-5">📦</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">👥 Сотрудники</h5>
+                            <h2 class="card-text">{{ available_data.employee_count|default:0 }}</h2>
+                        </div>
+                        <div class="display-5">👥</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="card-title">📊 Отчеты</h5>
+                            <h2 class="card-text">{{ available_data.report_count|default:0 }}</h2>
+                        </div>
+                        <div class="display-5">📊</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Графики -->
+    <div class="row">
+        {% for chart in charts_data %}
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ chart.title }}</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('{{ chart.chart_id }}')">
+                            📥 PNG
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <div class="export-buttons">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('{{ chart.chart_id }}')">
+                                📥 PNG
+                            </button>
+                        </div>
+                        <div id="{{ chart.chart_id }}"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h4>📊 Нет данных для отображения</h4>
+                <p>Для отображения аналитики необходимо наличие данных в системе.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Обновление данных -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">🔄 Обновление данных</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="mb-0">Данные обновляются автоматически. Последнее обновление: <span id="last-update">{{ date_range.end }}</span></p>
+                </div>
+                <button class="btn btn-outline-primary" id="refresh-data">
+                    🔄 Обновить данные
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Загружаем Plotly скрипт в конце body -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+// Функция отрисовки графиков
+function renderCharts() {
+    {% for chart in charts_data %}
+        (function() {  // Используем IIFE для изоляции переменных
+            const data = [{
+                x: {{ chart.x_data|safe }},
+                y: {{ chart.y_data|safe }},
+                type: '{{ chart.chart_type }}',
+                marker: {color: '{{ chart.color }}'},
+                line: {color: '{{ chart.color }}', width: 3}
+            }];
+            
+            const layout = {
+                title: '{{ chart.title|escapejs }}',
+                xaxis: {title: '{{ chart.x_label|escapejs }}'},
+                yaxis: {title: '{{ chart.y_label|escapejs }}'},
+                height: 400
+            };
+            
+            Plotly.newPlot('{{ chart.chart_id }}', data, layout);
+        })();
+    {% endfor %}
+}
+
+// Функция обновления графиков
+function updateCharts() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    const formData = new FormData();
+    formData.append('start_date', startDate);
+    formData.append('end_date', endDate);
+    
+    // Показываем индикатор загрузки
+    document.querySelectorAll('.chart-container').forEach(container => {
+        container.innerHTML += '<div class="loading-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;z-index:1000;"><div class="spinner-border" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+    });
+    
+    fetch('{% url "update_charts" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error('Error:', data.error);
+            alert('Ошибка обновления данных: ' + data.error);
+            // Убираем индикатор загрузки
+            document.querySelectorAll('.loading-overlay').forEach(overlay => overlay.remove());
+            return;
+        }
+        
+        // Обновляем графики (в реальной реализации)
+        // Пока просто обновляем страницу
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при обновлении данных');
+        // Убираем индикатор загрузки
+        document.querySelectorAll('.loading-overlay').forEach(overlay => overlay.remove());
+    });
+}
+
+// Обработчики событий
+document.getElementById('apply-filters').addEventListener('click', updateCharts);
+document.getElementById('refresh-data').addEventListener('click', updateCharts);
+
+// Обработчик выбора периода
+document.getElementById('time_period').addEventListener('change', function() {
+    const days = parseInt(this.value);
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    
+    document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
+});
+
+// Обработчик сброса фильтров
+document.getElementById('reset-filters').addEventListener('click', function() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+    
+    document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
+    document.getElementById('time_period').value = '30';
+    
+    // Не обновляем графики автоматически
+});
+
+// Функция экспорта графика (только PNG)
+function exportChart(chartId) {
+    window.location.href = `/analytics/export/${chartId}/`;
+}
+
+// Убедимся, что Plotly скрипты загружены и графики отрисовываются
+// Ждем, пока Plotly будет доступен
+function waitForPlotly() {
+    if (typeof Plotly !== 'undefined') {
+        // Отрисовываем графики
+        renderCharts();
+        console.log('Charts rendered successfully');
+    } else {
+        // Повторяем проверку через 100мс
+        setTimeout(waitForPlotly, 100);
+    }
+}
+
+// Запускаем проверку после загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    waitForPlotly();
+});
+
+// Функция для обновления графиков с фильтрами
+function updateChartsWithFilters() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    // В реальной реализации здесь будет AJAX запрос
+    // Пока просто обновляем страницу с параметрами
+    const url = new URL(window.location);
+    url.searchParams.set('start_date', startDate);
+    url.searchParams.set('end_date', endDate);
+    window.location.href = url.toString();
+}
+</script>
+
+{% endblock %}

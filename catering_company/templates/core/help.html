@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Справка{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Справка</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>❓ Справка</h1>
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">📋 Меню справки</h3>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{% url 'user_manual' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">📖 Руководство пользователя</h5>
+                                <small class="text-muted">Помощь</small>
+                            </div>
+                            <p class="mb-1">Подробное руководство по использованию системы</p>
+                        </a>
+                        <a href="{% url 'about_app' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">ℹ️ О программе</h5>
+                                <small class="text-muted">Информация</small>
+                            </div>
+                            <p class="mb-1">Информация о системе, разработчиках и версии</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

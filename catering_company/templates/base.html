@@ -35,6 +35,26 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard' %}">📊 Панель управления</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'sql_query' %}">
+                                🔍 SQL Запросы
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'help' %}">
+                                ❓ Справка
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'analytics' %}">
+                                📈 Аналитика
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'miscellaneous' %}">
+                                🔧 Разное
+                            </a>
+                        </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav ms-auto">

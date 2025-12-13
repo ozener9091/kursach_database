@@ -36,7 +36,7 @@
         </div>
         <div class="btn-group">
             {% if has_add_permission %}
-            <a href="{% url 'admin:core_'|add:model_name|add:'_add' %}" class="btn btn-success">
+            <a href="{% url 'add_'|add:model_name %}" class="btn btn-success">
                 ➕ Добавить запись
             </a>
             {% endif %}
@@ -154,23 +154,23 @@
                             </td>
                             {% endfor %}
                             {% if has_change_permission or has_delete_permission %}
-                            <td class="text-end">
-                                <div class="btn-group btn-group-sm">
-                                    {% if has_change_permission %}
-                                    <a href="{% url 'admin:core_'|add:model_name|add:'_change' object.id %}" 
-                                       class="btn btn-outline-warning" title="Изменить">
-                                        ✏️
-                                    </a>
-                                    {% endif %}
-                                    {% if has_delete_permission %}
-                                    <a href="{% url 'admin:core_'|add:model_name|add:'_delete' object.id %}" 
-                                       class="btn btn-outline-danger" title="Удалить">
-                                        🗑️
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            {% endif %}
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        {% if has_change_permission %}
+                                        <a href="{% url 'edit_'|add:model_name object.id %}" 
+                                        class="btn btn-outline-warning" title="Изменить">
+                                            ✏️
+                                        </a>
+                                        {% endif %}
+                                        {% if has_delete_permission %}
+                                        <a href="{% url 'delete_'|add:model_name object.id %}" 
+                                        class="btn btn-outline-danger" title="Удалить">
+                                            🗑️
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                {% endif %}
                         </tr>
                         {% empty %}
                         <tr>
@@ -180,7 +180,7 @@
                                     <h5>Таблица пуста</h5>
                                     <p>Нет записей для отображения</p>
                                     {% if has_add_permission %}
-                                    <a href="{% url 'admin:core_'|add:model_name|add:'_add' %}" class="btn btn-primary mt-2">
+                                    <a href="{% url 'add_'|add:model_name %}" class="btn btn-primary mt-2">
                                         ➕ Добавить первую запись
                                     </a>
                                     {% endif %}

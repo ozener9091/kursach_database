@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}SQL Запросы{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item active" aria-current="page">SQL Запросы</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>🔍 SQL Запросы</h1>
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📝 Введите SQL SELECT запрос</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <textarea class="form-control" name="sql_query" rows="6" 
+                                      placeholder="Введите ваш SQL SELECT запрос сюда...">{{ sql_query|default:'' }}</textarea>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">✅ Выполнить запрос</button>
+                            {% if query_executed %}
+                            <button type="submit" name="export" value="1" class="btn btn-success">
+                                📥 Экспорт в Excel
+                            </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if query_executed %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📊 Результаты запроса</h5>
+                    <div>
+                        <small class="text-muted me-3">Запрос: {{ sql_query }}</small>
+                        <button type="submit" form="export-form" name="export" value="1" class="btn btn-sm btn-outline-success">
+                            📥 Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    {% for column in columns %}
+                                    <th>{{ column }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in results %}
+                                <tr>
+                                    {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if results %}
+                <div class="card-footer bg-light">
+                    <small class="text-muted">Найдено {{ results|length }} записей</small>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Скрытая форма для экспорта -->
+            <form id="export-form" method="post" style="display: none;">
+                {% csrf_token %}
+                <input type="hidden" name="sql_query" value="{{ sql_query }}">
+                <input type="hidden" name="export" value="1">
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 Доступные таблицы</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for model in available_models %}
+                        <div class="col-12 mb-2">
+                            <span class="badge bg-primary">{{ model.name }}</span>
+                            <small class="text-muted d-block">{{ model.verbose_name }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {% if template_queries %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">🎯 Шаблоны запросов</h5>
+                </div>
+                <div class="card-body">
+                    {% for template in template_queries %}
+                    <div class="mb-3">
+                        <button class="btn btn-outline-primary w-100 text-start" 
+                                type="button" 
+                                onclick="fillQuery('{{ template.query|escapejs }}')">
+                            {{ template.name }}
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">ℹ️ Информация</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="small">
+                        <li>Разрешены только <code>SELECT</code> запросы</li>
+                        <li>Можно использовать только разрешенные таблицы</li>
+                        <li>Запросы не могут изменять данные</li>
+                        <li>Используйте префиксы таблиц в формате <code>core_название_таблицы</code></li>
+                        <li>Результаты можно экспортировать в Excel файл</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function fillQuery(query) {
+    document.querySelector('textarea[name="sql_query"]').value = query;
+}
+</script>
+
+{% endblock %}

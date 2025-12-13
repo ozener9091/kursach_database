@@ -1,9 +1,8 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
-
 from django.apps import apps
-from .views import UniversalTableView
+from .views import UniversalTableView, UniversalCreateView, UniversalUpdateView, UniversalDeleteView
 
 app_models = apps.get_app_config('core').get_models()
 
@@ -22,7 +21,16 @@ urlpatterns = [
     path('tables/manager/', views.manager_tables, name='manager_tables'),
     path('tables/chef/', views.chef_tables, name='chef_tables'),
     path('tables/hr/', views.hr_tables, name='hr_tables'),
-    
+    path('sql-query/', views.sql_query_page, name='sql_query'),
+    path('help/', views.help_page, name='help'),
+    path('help/manual/', views.user_manual, name='user_manual'),
+    path('help/about/', views.about_app, name='about_app'),
+    path('miscellaneous/', views.miscellaneous_page, name='miscellaneous'),
+    path('settings/', views.settings_page, name='settings'),
+    path('change-password/', views.change_password, name='change_password'),
+    path('analytics/', views.analytics_dashboard, name='analytics'),
+    path('analytics/update/', views.update_charts_data, name='update_charts'),
+    path('analytics/export/<str:chart_id>/', views.export_chart, name='export_chart'),
 ]
 
 for model in app_models:
@@ -37,8 +45,31 @@ for model in app_models:
         {'model': model}
     )
     
-    # Добавляем URL pattern
-    urlpatterns.append(
-        path(f'table/{model_name}/', view_class.as_view(), name=f'table_{model_name}')
+    # View для создания
+    create_view_class = type(
+        f'{model_name.title()}CreateView',
+        (UniversalCreateView,),
+        {'model': model}
     )
-
+    
+    # View для редактирования
+    update_view_class = type(
+        f'{model_name.title()}UpdateView',
+        (UniversalUpdateView,),
+        {'model': model}
+    )
+    
+    # View для удаления
+    delete_view_class = type(
+        f'{model_name.title()}DeleteView',
+        (UniversalDeleteView,),
+        {'model': model}
+    )
+    
+    # Добавляем URL pattern
+    urlpatterns.extend([
+        path(f'table/{model_name}/', view_class.as_view(), name=f'table_{model_name}'),
+        path(f'table/{model_name}/add/', create_view_class.as_view(), name=f'add_{model_name}'),
+        path(f'table/{model_name}/edit/<int:pk>/', update_view_class.as_view(), name=f'edit_{model_name}'),
+        path(f'table/{model_name}/delete/<int:pk>/', delete_view_class.as_view(), name=f'delete_{model_name}'),
+    ])

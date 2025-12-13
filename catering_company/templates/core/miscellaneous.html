@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Разное{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Разное</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>🔧 Разное</h1>
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">📋 Меню "Разное"</h3>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{% url 'settings' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">⚙️ Настройка</h5>
+                                <small class="text-muted">Персонализация</small>
+                            </div>
+                            <p class="mb-1">Изменение языка интерфейса, размера шрифта и других параметров</p>
+                        </a>
+                        <a href="{% url 'change_password' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">🔐 Сменить пароль</h5>
+                                <small class="text-muted">Безопасность</small>
+                            </div>
+                            <p class="mb-1">Изменение пароля учетной записи</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

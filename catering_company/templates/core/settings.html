@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block title %}Настройка{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'miscellaneous' %}">🔧 Разное</a></li>
+            <li class="breadcrumb-item active" aria-current="page">⚙️ Настройка</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>⚙️ Настройка</h1>
+        <div class="btn-group">
+            <a href="{% url 'miscellaneous' %}" class="btn btn-outline-secondary">
+                ← Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">🔧 Персональные настройки</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <h5>🔤 Язык интерфейса</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="language" id="lang_ru" value="ru" {% if language == 'ru' %}checked{% endif %}>
+                                <label class="form-check-label" for="lang_ru">
+                                    🇷🇺 Русский
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="language" id="lang_en" value="en" {% if language == 'en' %}checked{% endif %}>
+                                <label class="form-check-label" for="lang_en">
+                                    🇬🇧 English
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>📏 Размер шрифта</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="font_size" id="size_small" value="small" {% if font_size == 'small' %}checked{% endif %}>
+                                <label class="form-check-label" for="size_small">
+                                    Маленький шрифт
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="font_size" id="size_normal" value="normal" {% if font_size == 'normal' %}checked{% endif %}>
+                                <label class="form-check-label" for="size_normal">
+                                    Обычный шрифт (по умолчанию)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="font_size" id="size_large" value="large" {% if font_size == 'large' %}checked{% endif %}>
+                                <label class="form-check-label" for="size_large">
+                                    Большой шрифт
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="font_size" id="size_xlarge" value="xlarge" {% if font_size == 'xlarge' %}checked{% endif %}>
+                                <label class="form-check-label" for="size_xlarge">
+                                    Очень большой шрифт
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>🎨 Тема оформления</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="theme" id="theme_light" value="light" checked>
+                                <label class="form-check-label" for="theme_light">
+                                    Светлая тема
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="theme" id="theme_dark" value="dark">
+                                <label class="form-check-label" for="theme_dark">
+                                    Темная тема (в разработке)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>🔔 Уведомления</h5>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="notifications_email" checked>
+                                <label class="form-check-label" for="notifications_email">
+                                    Email уведомления
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="notifications_system" checked>
+                                <label class="form-check-label" for="notifications_system">
+                                    Системные уведомления
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                ✅ Сохранить настройки
+                            </button>
+                            <a href="{% url 'settings' %}" class="btn btn-outline-secondary">
+                                Сбросить
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">ℹ️ Информация о настройках</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="small">
+                        <li>Настройки сохраняются в сессии и действуют до окончания сеанса</li>
+                        <li>Изменение языка интерфейса влияет на отображение текстов в системе</li>
+                        <li>Размер шрифта влияет на читаемость всех элементов интерфейса</li>
+                        <li>Для сохранения настроек на постоянной основе требуется дополнительная реализация</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Применение размера шрифта к интерфейсу
+document.addEventListener('DOMContentLoaded', function() {
+    const currentFontSize = '{{ font_size }}';
+    applyFontSize(currentFontSize);
+});
+
+function applyFontSize(size) {
+    const body = document.body;
+    body.classList.remove('font-small', 'font-large', 'font-xlarge');
+    
+    switch(size) {
+        case 'small':
+            body.classList.add('font-small');
+            break;
+        case 'large':
+            body.classList.add('font-large');
+            break;
+        case 'xlarge':
+            body.classList.add('font-xlarge');
+            break;
+        default:
+            // normal size, no additional class needed
+    }
+}
+</script>
+
+<style>
+.font-small {
+    font-size: 0.875rem;
+}
+
+.font-large {
+    font-size: 1.25rem;
+}
+
+.font-xlarge {
+    font-size: 1.5rem;
+}
+</style>
+
+{% endblock %}

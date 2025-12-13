@@ -1,7 +1,7 @@
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.views.generic import ListView, DetailView
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView
 from django.db.models import Q
 from .models import *
 from .permissions import *
@@ -51,8 +51,6 @@ class TableListView(LoginRequiredMixin, ListView):
         return self.model.objects.all()
 
 
-# ====== Views для каждой роли ======
-
 @login_required
 def director_tables(request):
     """Список всех таблиц для директора"""
@@ -61,7 +59,6 @@ def director_tables(request):
         messages.error(request, 'У вас нет доступа к этой странице')
         return redirect('dashboard')
     
-    # Все модели приложения core
     from django.apps import apps
     app_models = apps.get_app_config('core').get_models()
     
@@ -70,7 +67,6 @@ def director_tables(request):
         model_name = model._meta.model_name
         verbose_name = model._meta.verbose_name_plural
         
-        # Пропускаем абстрактные модели и модели без объектов
         if model_name in ['abbreviationtype', 'gendertype', 'eventtype']:
             continue
             
@@ -79,7 +75,6 @@ def director_tables(request):
         except:
             count = 0
         
-        # Формируем имя URL
         url_name = f'table_{model_name}'
         
         tables.append({
@@ -100,9 +95,7 @@ def director_tables(request):
 @login_required
 def manager_tables(request):
     """Список таблиц для менеджера"""
-    # Проверяем доступ
     if not request.user.groups.filter(name='Менеджер').exists() and not request.user.is_superuser:
-        # Проверяем, может пользователь директор?
         if not request.user.groups.filter(name='Директор').exists():
             from django.contrib import messages
             messages.error(request, 'У вас нет доступа к этой странице')
@@ -140,7 +133,6 @@ def manager_tables(request):
         except:
             continue
     
-    # Добавляем справочники
     reference_models = [
         ('country', 'Страны', Country),
         ('city', 'Города', City),
@@ -174,7 +166,6 @@ def manager_tables(request):
 @login_required
 def chef_tables(request):
     """Список таблиц для шеф-повара"""
-    # Проверяем доступ
     if not request.user.groups.filter(name='Шеф-повар').exists() and not request.user.is_superuser:
         # Проверяем, может пользователь директор?
         if not request.user.groups.filter(name='Директор').exists():
@@ -182,7 +173,6 @@ def chef_tables(request):
             messages.error(request, 'У вас нет доступа к этой странице')
             return redirect('dashboard')
     
-    # Таблицы для шеф-повара
     chef_models = [
         ('dish', 'Блюда', Dish),
         ('product', 'Продукты', Product),
@@ -205,7 +195,6 @@ def chef_tables(request):
         except:
             continue
     
-    # Справочники
     reference_models = [
         ('assortmentgroup', 'Группы ассортимента', AssortmentGroup),
         ('unitofmeasurement', 'Единицы измерения', UnitOfMeasurement),
@@ -239,15 +228,13 @@ def chef_tables(request):
 @login_required
 def hr_tables(request):
     """Список таблиц для менеджера по кадрам"""
-    # Проверяем доступ
     if not request.user.groups.filter(name='Менеджер по кадрам').exists() and not request.user.is_superuser:
         # Проверяем, может пользователь директор?
         if not request.user.groups.filter(name='Директор').exists():
             from django.contrib import messages
             messages.error(request, 'У вас нет доступа к этой странице')
             return redirect('dashboard')
-    
-    # Таблицы для HR
+
     hr_models = [
         ('employee', 'Сотрудники', Employee),
         ('position', 'Должности', Position),
@@ -275,7 +262,6 @@ def hr_tables(request):
         except:
             continue
     
-    # Справочники
     reference_models = [
         ('country', 'Страны', Country),
         ('city', 'Города', City),
@@ -310,6 +296,48 @@ class UniversalTableView(LoginRequiredMixin, ListView):
     template_name = 'core/universal_table.html'
     paginate_by = 20
     model = None
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Получаем поисковый запрос
+        search_query = self.request.GET.get('search', '').strip()
+        
+        if search_query and self.model:
+            # Получаем все текстовые поля модели
+            text_fields = []
+            for field in self.model._meta.get_fields():
+                # Ищем текстовые поля (CharField, TextField)
+                if (hasattr(field, 'get_internal_type') and 
+                    field.get_internal_type() in ['CharField', 'TextField', 'EmailField', 'URLField']):
+                    text_fields.append(field.name)
+            
+            # Также ищем в ForeignKey полях (через связанные объекты)
+            fk_fields = []
+            for field in self.model._meta.get_fields():
+                if (hasattr(field, 'get_internal_type') and 
+                    field.get_internal_type() == 'ForeignKey'):
+                    fk_fields.append(field.name)
+            
+            # Создаем Q-объекты для поиска
+            q_objects = Q()
+            
+            # Поиск по текстовым полям
+            for field_name in text_fields:
+                q_objects |= Q(**{f'{field_name}__icontains': search_query})
+            
+            # Поиск по ForeignKey полям (через связанные объекты)
+            for fk_field in fk_fields:
+                # Пробуем поиск по полю name в связанном объекте
+                q_objects |= Q(**{f'{fk_field}__name__icontains': search_query})
+                # Также пробуем другие возможные текстовые поля
+                q_objects |= Q(**{f'{fk_field}__title__icontains': search_query})
+            
+            # Если есть условия для поиска
+            if q_objects:
+                queryset = queryset.filter(q_objects).distinct()
+        
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -392,236 +420,11 @@ class UniversalTableView(LoginRequiredMixin, ListView):
             
             context['fields'] = fields
             context['model_name'] = self.model._meta.model_name
+            context['search_query'] = self.request.GET.get('search', '')
             
             # Проверяем права доступа
             context['has_add_permission'] = self.request.user.has_perm(f'core.add_{self.model._meta.model_name}')
             context['has_change_permission'] = self.request.user.has_perm(f'core.change_{self.model._meta.model_name}')
             context['has_delete_permission'] = self.request.user.has_perm(f'core.delete_{self.model._meta.model_name}')
-            
-            # Для ManyToMany полей (отдельно)
-            m2m_fields = []
-            for field in self.model._meta.get_fields():
-                if isinstance(field, models.ManyToManyField):
-                    m2m_fields.append({
-                        'name': field.name,
-                        'verbose_name': field.verbose_name,
-                    })
-            context['m2m_fields'] = m2m_fields
         
         return context
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Применяем поиск
-        search = self.request.GET.get('search', '')
-        if search and self.model:
-            # Создаем Q-объект для поиска по текстовым полям
-            from django.db.models import Q
-            
-            # Получаем текстовые поля модели
-            text_fields = []
-            for field in self.model._meta.get_fields():
-                if (isinstance(field, models.CharField) or 
-                    isinstance(field, models.TextField)):
-                    text_fields.append(field.name)
-            
-            # Создаем условия поиска
-            q_objects = Q()
-            for field_name in text_fields:
-                q_objects |= Q(**{f'{field_name}__icontains': search})
-            
-            if text_fields:
-                queryset = queryset.filter(q_objects)
-        
-        return queryset
-
-
-# ====== Конкретные представления для каждой таблицы ======
-
-# Блюда
-class DishListView(TableListView):
-    model = Dish
-    table_title = 'Блюда'
-    fields_to_display = ['name', 'price', 'output', 'assortment_group', 'unit_of_measurement']
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        # Добавляем поиск
-        search = self.request.GET.get('search', '')
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) |
-                Q(description__icontains=search)
-            )
-        return queryset.select_related('assortment_group', 'unit_of_measurement')
-
-# Ингредиенты
-class IngredientListView(TableListView):
-    model = Ingredient
-    table_title = 'Ингредиенты'
-    fields_to_display = ['name', 'gross_weight', 'net_weight']
-
-# Продукты
-class ProductListView(TableListView):
-    model = Product
-    table_title = 'Продукты'
-    fields_to_display = ['name', 'purchase_price', 'price_premium', 'remaining_stock', 'provider', 'unit_of_measurement']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('provider', 'unit_of_measurement')
-
-# Поставщики
-class ProviderListView(TableListView):
-    model = Provider
-    table_title = 'Поставщики'
-    fields_to_display = ['name', 'abbreviation', 'director_last_name', 'city', 'bank']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('city', 'bank', 'country', 'street')
-
-# Сотрудники
-class EmployeeListView(TableListView):
-    model = Employee
-    table_title = 'Сотрудники'
-    fields_to_display = ['last_name', 'first_name', 'middle_name', 'position', 'gender', 'birthday_date']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('position', 'country', 'city', 'street')
-
-# Поставки
-class DeliveryListView(TableListView):
-    model = Delivery
-    table_title = 'Поставки'
-    fields_to_display = ['date', 'provider']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('provider')
-
-# Заявки
-class RequestListView(TableListView):
-    model = Request
-    table_title = 'Заявки'
-    fields_to_display = ['date', 'division']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('division')
-
-# Отчеты
-class ReportListView(TableListView):
-    model = Report
-    table_title = 'Отчеты'
-    fields_to_display = ['date']
-
-# Должности
-class PositionListView(TableListView):
-    model = Position
-    table_title = 'Должности'
-    fields_to_display = ['name', 'code']
-
-# Трудовые книжки
-class WorkBookListView(TableListView):
-    model = WorkBook
-    table_title = 'Трудовые книжки'
-    fields_to_display = ['employee', 'event_date', 'event_type', 'place_of_work', 'profession']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('employee', 'place_of_work', 'profession', 
-                                                    'department', 'specialization', 'classification')
-
-# Справочники
-class CountryListView(TableListView):
-    model = Country
-    table_title = 'Страны'
-    fields_to_display = ['name']
-
-class CityListView(TableListView):
-    model = City
-    table_title = 'Города'
-    fields_to_display = ['name']
-
-class StreetListView(TableListView):
-    model = Street
-    table_title = 'Улицы'
-    fields_to_display = ['name']
-
-class UnitOfMeasurementListView(TableListView):
-    model = UnitOfMeasurement
-    table_title = 'Единицы измерения'
-    fields_to_display = ['name']
-
-class AssortmentGroupListView(TableListView):
-    model = AssortmentGroup
-    table_title = 'Группы ассортимента'
-    fields_to_display = ['name']
-
-class BankListView(TableListView):
-    model = Bank
-    table_title = 'Банки'
-    fields_to_display = ['name', 'bank_identification_code', 'taxpayer_identification_number']
-
-# Отчеты по блюдам
-class ReportDishListView(TableListView):
-    model = ReportDish
-    table_title = 'Блюда в отчетах'
-    fields_to_display = ['report', 'dish', 'quantity']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('report', 'dish')
-
-# Продукты в заявках
-class RequestProductListView(TableListView):
-    model = RequestProduct
-    table_title = 'Продукты в заявках'
-    fields_to_display = ['request', 'product', 'quantity']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('request', 'product')
-
-# Продукты в поставках
-class DeliveryProductListView(TableListView):
-    model = DeliveryProduct
-    table_title = 'Продукты в поставках'
-    fields_to_display = ['delivery', 'product', 'quantity']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('delivery', 'product')
-
-# Места работы
-class PlaceOfWorkListView(TableListView):
-    model = PlaceOfWork
-    table_title = 'Места работы'
-    fields_to_display = ['name', 'country', 'city', 'street']
-    
-    def get_queryset(self):
-        return super().get_queryset().select_related('country', 'city', 'street')
-
-# Подразделения предприятия
-class DepartmentListView(TableListView):
-    model = Department
-    table_title = 'Структурные подразделения'
-    fields_to_display = ['name']
-
-# Профессии
-class ProfessionListView(TableListView):
-    model = Profession
-    table_title = 'Профессии'
-    fields_to_display = ['name']
-
-# Специализации
-class SpecializationListView(TableListView):
-    model = Specialization
-    table_title = 'Специализации'
-    fields_to_display = ['name']
-
-# Классификации
-class ClassificationListView(TableListView):
-    model = Classification
-    table_title = 'Классификации'
-    fields_to_display = ['name']
-
-# Подразделения (Division)
-class DivisionListView(TableListView):
-    model = Division
-    table_title = 'Подразделения предприятия'
-    fields_to_display = ['name']

@@ -103,9 +103,15 @@
                     <p class="text-muted mb-0">Блюд в меню</p>
                 </div>
                 <div class="card-footer bg-transparent">
+                    {% if perms.core.view_dish or user.is_superuser or user.groups.first.name == 'Директор' %}
                     <a href="{% url 'table_dish' %}" class="btn btn-outline-primary btn-sm w-100">
                         Перейти к блюдам
                     </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100" disabled title="Нет доступа к блюдам">
+                        Нет доступа
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -118,9 +124,15 @@
                     <p class="text-muted mb-0">Сотрудников</p>
                 </div>
                 <div class="card-footer bg-transparent">
+                    {% if perms.core.view_employee or user.is_superuser or user.groups.first.name == 'Директор' %}
                     <a href="{% url 'table_employee' %}" class="btn btn-outline-success btn-sm w-100">
                         Перейти к сотрудникам
                     </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100" disabled title="Нет доступа к сотрудникам">
+                        Нет доступа
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -133,9 +145,15 @@
                     <p class="text-muted mb-0">Продуктов на складе</p>
                 </div>
                 <div class="card-footer bg-transparent">
+                    {% if perms.core.view_product or user.is_superuser or user.groups.first.name == 'Директор' %}
                     <a href="{% url 'table_product' %}" class="btn btn-outline-warning btn-sm w-100">
                         Перейти к продуктам
                     </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100" disabled title="Нет доступа к продуктам">
+                        Нет доступа
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -148,13 +166,20 @@
                     <p class="text-muted mb-0">Поставок</p>
                 </div>
                 <div class="card-footer bg-transparent">
+                    {% if perms.core.view_delivery or user.is_superuser or user.groups.first.name == 'Директор' %}
                     <a href="{% url 'table_delivery' %}" class="btn btn-outline-info btn-sm w-100">
                         Перейти к поставкам
                     </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100" disabled title="Нет доступа к поставкам">
+                        Нет доступа
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+        
 
     <!-- Доступные таблицы по ролям -->
     <h3 class="mb-3">📋 Таблицы данных</h3>
@@ -357,7 +382,6 @@
                     <strong>Система управления рестораном</strong><br>
                     Версия: 1.0.0<br>
                     Дата: {% now "d.m.Y" %}<br>
-                    Время: <span id="current-time"></span>
                 </p>
             </div>
             <div class="col-md-6">
@@ -372,64 +396,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Обновление текущего времени
-function updateCurrentTime() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('ru-RU', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-    document.getElementById('current-time').textContent = timeString;
-}
-
-// Обновляем время каждую секунду
-setInterval(updateCurrentTime, 1000);
-updateCurrentTime();
-
-// Анимация карточек
-document.addEventListener('DOMContentLoaded', function() {
-    const cards = document.querySelectorAll('.card');
-    
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-            this.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
-            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '';
-        });
-    });
-    
-    // Подсветка текущей роли
-    const userRole = "{{ user.groups.first.name|default:'' }}";
-    const roleCards = document.querySelectorAll('.card.border-primary, .card.border-success, .card.border-warning, .card.border-info');
-    
-    roleCards.forEach(card => {
-        const cardRole = card.querySelector('.card-header h6').textContent.trim();
-        if (cardRole.includes(userRole)) {
-            card.style.borderWidth = '3px';
-            card.style.animation = 'pulse 2s infinite';
-        }
-    });
-});
-
-// CSS анимация
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4); }
-        70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
-    }
-`;
-document.head.appendChild(style);
-</script>
 {% endblock %}

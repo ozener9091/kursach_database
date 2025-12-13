@@ -1,4 +1,3 @@
-# core/urls.py
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
@@ -19,7 +18,6 @@ urlpatterns = [
         template_name='core/logout.html'
     ), name='logout'),
     
-    # Ролевые страницы с таблицами
     path('tables/director/', views.director_tables, name='director_tables'),
     path('tables/manager/', views.manager_tables, name='manager_tables'),
     path('tables/chef/', views.chef_tables, name='chef_tables'),
@@ -30,11 +28,9 @@ urlpatterns = [
 for model in app_models:
     model_name = model._meta.model_name
     
-    # Пропускаем абстрактные модели
     if model_name in ['abbreviationtype', 'gendertype', 'eventtype']:
         continue
     
-    # Создаем View класс для модели
     view_class = type(
         f'{model_name.title()}UniversalView',
         (UniversalTableView,),

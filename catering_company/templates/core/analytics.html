@@ -288,18 +288,6 @@ function exportChart(chartId) {
     window.location.href = `/analytics/export/${chartId}/`;
 }
 
-// Убедимся, что Plotly скрипты загружены и графики отрисовываются
-// Ждем, пока Plotly будет доступен
-function waitForPlotly() {
-    if (typeof Plotly !== 'undefined') {
-        // Отрисовываем графики
-        renderCharts();
-        console.log('Charts rendered successfully');
-    } else {
-        // Повторяем проверку через 100мс
-        setTimeout(waitForPlotly, 100);
-    }
-}
 
 // Запускаем проверку после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {

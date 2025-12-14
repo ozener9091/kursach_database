@@ -2,7 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
 from django.apps import apps
-from .views import UniversalTableView, UniversalCreateView, UniversalUpdateView, UniversalDeleteView
+from . import views
 
 app_models = apps.get_app_config('core').get_models()
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(
         template_name='core/logout.html'
     ), name='logout'),
+    path('password-reset/', views.password_reset_request, name='password_reset'),
     
     path('tables/director/', views.director_tables, name='director_tables'),
     path('tables/manager/', views.manager_tables, name='manager_tables'),
@@ -41,28 +42,28 @@ for model in app_models:
     
     view_class = type(
         f'{model_name.title()}UniversalView',
-        (UniversalTableView,),
+        (views.UniversalTableView,),
         {'model': model}
     )
     
     # View для создания
     create_view_class = type(
         f'{model_name.title()}CreateView',
-        (UniversalCreateView,),
+        (views.UniversalCreateView,),
         {'model': model}
     )
     
     # View для редактирования
     update_view_class = type(
         f'{model_name.title()}UpdateView',
-        (UniversalUpdateView,),
+        (views.UniversalUpdateView,),
         {'model': model}
     )
     
     # View для удаления
     delete_view_class = type(
         f'{model_name.title()}DeleteView',
-        (UniversalDeleteView,),
+        (views.UniversalDeleteView,),
         {'model': model}
     )
     

@@ -1,13 +1,42 @@
-from django.shortcuts import render
-from django.db import connection
+import secrets
+import string
+import re
+import io
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.admin.views.decorators import staff_member_required
+from django.core.mail import send_mail
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import connection, models
+from django.db.models import Q, Count, Sum, Avg, F
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.db.models import Q
+from django.db.models.functions import TruncMonth
+from django.conf import settings
+from django.apps import apps
+
+from django.contrib import messages
+
+from datetime import datetime, timedelta
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 from .models import *
+from .forms import *
 from .permissions import *
 from .decorators import *
-from .forms import DishForm
+
 
 def help_page(request):
     """Страница справки"""
@@ -23,10 +52,12 @@ def about_app(request):
 
 @login_required
 def home(request):
+    """Домашняя страница"""
     return render(request, 'core/home.html', {'title': 'Главная страница'})
 
 @login_required
 def dashboard(request):
+    """Панель управления"""
     context = {
         'title': 'Панель управления',
         'user': request.user,
@@ -41,11 +72,59 @@ def dashboard(request):
     
     return render(request, 'core/dashboard.html', context)
 
+def password_reset_request(request):
+    """Смена пароля"""
+    if request.method == 'POST':
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                user = User.objects.get(email=email)
+                
+                # Генерируем новый пароль
+                new_password = ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%^&*') for _ in range(12))
+                
+                # Устанавливаем новый пароль
+                user.set_password(new_password)
+                user.save()
+                
+                # Отправляем email с новым паролем
+                subject = 'Восстановление пароля'
+                message = f'''
+                Здравствуйте,
+                
+                Ваш новый пароль: {new_password}
+                
+                Пожалуйста, измените его после входа в систему.
+                
+                С уважением,
+                Администрация сайта
+                '''
+                
+                from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@localhost'
+                
+                send_mail(
+                    subject,
+                    message,
+                    from_email,
+                    [email],
+                    fail_silently=False,
+                )
+                
+                messages.success(request, 'Новый пароль отправлен на ваш email. Пожалуйста, проверьте почту.')
+                return redirect('login')
+                
+            except User.DoesNotExist:
+                messages.error(request, 'Пользователь с таким email не найден')
+    else:
+        form = PasswordResetForm()
+    
+    return render(request, 'core/password_reset.html', {'form': form})
 
 class TableListView(LoginRequiredMixin, ListView):
     """Базовый класс для отображения таблиц"""
     template_name = 'core/table_list.html'
-    paginate_by = 20
+    paginate_by = 10
     model = None
     table_title = ''
     fields_to_display = []
@@ -61,19 +140,16 @@ class TableListView(LoginRequiredMixin, ListView):
         return context
     
     def get_queryset(self):
-        # Базовый queryset - все объекты
         return self.model.objects.all()
-
 
 @login_required
 def director_tables(request):
     """Список всех таблиц для директора"""
     if not request.user.groups.filter(name='Директор').exists() and not request.user.is_superuser:
-        from django.contrib import messages
         messages.error(request, 'У вас нет доступа к этой странице')
         return redirect('dashboard')
     
-    from django.apps import apps
+    
     app_models = apps.get_app_config('core').get_models()
     
     tables = []
@@ -106,12 +182,12 @@ def director_tables(request):
         'description': 'Полный доступ ко всем таблицам системы'
     })
 
+
 @login_required
 def manager_tables(request):
     """Список таблиц для менеджера"""
     if not request.user.groups.filter(name='Менеджер').exists() and not request.user.is_superuser:
         if not request.user.groups.filter(name='Директор').exists():
-            from django.contrib import messages
             messages.error(request, 'У вас нет доступа к этой странице')
             return redirect('dashboard')
     
@@ -177,13 +253,12 @@ def manager_tables(request):
         'description': 'Управление меню, поставками и заявками'
     })
 
+
 @login_required
 def chef_tables(request):
     """Список таблиц для шеф-повара"""
     if not request.user.groups.filter(name='Шеф-повар').exists() and not request.user.is_superuser:
-        # Проверяем, может пользователь директор?
         if not request.user.groups.filter(name='Директор').exists():
-            from django.contrib import messages
             messages.error(request, 'У вас нет доступа к этой странице')
             return redirect('dashboard')
     
@@ -239,13 +314,13 @@ def chef_tables(request):
         'description': 'Просмотр меню и продуктов, редактирование ингредиентов'
     })
 
+
 @login_required
 def hr_tables(request):
     """Список таблиц для менеджера по кадрам"""
     if not request.user.groups.filter(name='Менеджер по кадрам').exists() and not request.user.is_superuser:
         # Проверяем, может пользователь директор?
         if not request.user.groups.filter(name='Директор').exists():
-            from django.contrib import messages
             messages.error(request, 'У вас нет доступа к этой странице')
             return redirect('dashboard')
 
@@ -308,109 +383,105 @@ def hr_tables(request):
 class UniversalTableView(LoginRequiredMixin, ListView):
     """Универсальный View для отображения всех таблиц"""
     template_name = 'core/universal_table.html'
-    paginate_by = 20
+    paginate_by = 10  # Базовое значение
     model = None
     
+    def get_paginate_by(self, queryset):
+        """Возвращает количество элементов на странице в зависимости от параметра per_page"""
+        per_page = self.request.GET.get('per_page', 10)
+        try:
+            per_page = int(per_page)
+            # Ограничиваем возможные значения
+            if per_page not in [10, 20, 50, 100]:
+                per_page = 10
+        except ValueError:
+            per_page = 10
+        return per_page
+    
     def get_queryset(self):
-        from django.db.models import CharField
-        from django.db.models.functions import Cast
-        
+
         queryset = super().get_queryset()
         
         # Получаем поисковый запрос
         search_query = self.request.GET.get('search', '').strip()
         
         if search_query and self.model:
-            # Заменяем запятую на точку для корректной обработки чисел
-            normalized_search = search_query.replace(',', '.')
+            # Если есть поисковый запрос, фильтруем вручную
+            filtered_objects = []
             
-            # Сначала собираем все числовые поля для аннотирования
-            numeric_fields_for_annotation = []
+            # Получаем все объекты модели
+            all_objects = self.model.objects.all()
             
-            # Создаем Q-объекты для поиска
-            q_objects = Q()
-            
-            # Собираем все поля для поиска
-            all_fields = self.model._meta.get_fields()
-            
-            for field in all_fields:
-                if not hasattr(field, 'get_internal_type'):
-                    continue
-                    
-                field_type = field.get_internal_type()
+            for obj in all_objects:
+                # Собираем строку из всех значений полей объекта
+                record_string = ""
                 
-                if field_type in ['CharField', 'TextField', 'EmailField', 'URLField']:
-                    # Для текстовых полей
-                    q_objects |= Q(**{f'{field.name}__icontains': search_query})
+                for field in self.model._meta.get_fields():
+                    if not hasattr(field, 'get_internal_type'):
+                        continue
                     
-                elif field_type in ['DecimalField', 'FloatField', 'IntegerField', 'BigIntegerField', 
-                                'SmallIntegerField', 'PositiveIntegerField', 'PositiveSmallIntegerField']:
-                    # Для числовых полей - точное совпадение
+                    field_name = field.name
+                    
+                    # Пропускаем ManyToMany поля и обратные связи
+                    if field.many_to_many or field.auto_created:
+                        continue
+                    
                     try:
-                        if '.' in normalized_search:
-                            numeric_value = float(normalized_search)
-                        else:
-                            numeric_value = int(normalized_search)
-                        q_objects |= Q(**{f'{field.name}': numeric_value})
-                    except ValueError:
-                        pass
-                    
-                    # Сохраняем числовые поля для последующего аннотирования
-                    annotation_name = f'{field.name}_str'
-                    numeric_fields_for_annotation.append((field.name, annotation_name))
-                
-                elif field_type in ['AutoField', 'BigAutoField']:
-                    # Для автоинкрементных полей - только точное совпадение
-                    try:
-                        numeric_value = int(normalized_search)
-                        q_objects |= Q(**{f'{field.name}': numeric_value})
-                    except ValueError:
-                        pass
-                
-                elif field_type == 'ForeignKey':
-                    # Для ForeignKey полей - ищем в связанных моделях
-                    related_model = field.related_model
-                    # Попробуем основные поля в связанной модели
-                    for related_field_name in ['name', 'title', 'first_name', 'last_name', 'code', 'number', 'id']:
-                        try:
-                            related_field = related_model._meta.get_field(related_field_name)
-                            related_field_type = related_field.get_internal_type()
+                        # Получаем значение поля
+                        field_value = getattr(obj, field_name)
+                        
+                        if field_value is not None:
+                            # Для дат и времени конвертируем в строку в формате DD.MM.YYYY
+                            if hasattr(field_value, 'strftime'):  # Это дата/время
+                                if hasattr(field_value, 'date'):
+                                    field_value = field_value.strftime('%d.%m.%Y')
+                                else:
+                                    field_value = str(field_value)
                             
-                            if related_field_type in ['CharField', 'TextField', 'EmailField', 'URLField']:
-                                q_objects |= Q(**{f'{field.name}__{related_field_name}__icontains': search_query})
-                            elif related_field_type in ['DecimalField', 'FloatField', 'IntegerField', 'BigIntegerField', 
-                                                    'SmallIntegerField', 'PositiveIntegerField', 'PositiveSmallIntegerField']:
-                                try:
-                                    if '.' in normalized_search:
-                                        numeric_value = float(normalized_search)
-                                    else:
-                                        numeric_value = int(normalized_search)
-                                    q_objects |= Q(**{f'{field.name}__{related_field_name}': numeric_value})
-                                except ValueError:
-                                    pass
-                            elif related_field_type in ['AutoField', 'BigAutoField']:
-                                try:
-                                    numeric_value = int(normalized_search)
-                                    q_objects |= Q(**{f'{field.name}__{related_field_name}': numeric_value})
-                                except ValueError:
-                                    pass
-                        except:
-                            continue
+                            # Для ForeignKey получаем строковое представление связанного объекта
+                            elif hasattr(field_value, '_meta'):  # Это связанная модель
+                                field_value = str(field_value)
+                            
+                            # Добавляем значение к строке
+                            record_string += " " + str(field_value)
+                    except:
+                        # Если не удается получить значение, пропускаем поле
+                        continue
+                
+                # Проверяем, содержится ли поисковый запрос в строке записи
+                if search_query.lower() in record_string.lower():
+                    filtered_objects.append(obj)
             
-            # Теперь применяем аннотации для числовых полей
-            annotations = {}
-            for original_field, annotation_name in numeric_fields_for_annotation:
-                annotations[annotation_name] = Cast(original_field, CharField())
-            
-            if annotations:
-                queryset = queryset.annotate(**annotations)
-                # Теперь добавляем условия поиска по аннотированным строковым полям
-                for original_field, annotation_name in numeric_fields_for_annotation:
-                    q_objects |= Q(**{f'{annotation_name}__icontains': normalized_search.replace('.', '')})
-            
-            # Применяем фильтрацию
-            if q_objects:
-                queryset = queryset.filter(q_objects).distinct()
+            # Возвращаем отфильтрованный QuerySet
+            if filtered_objects:
+                object_ids = [obj.id for obj in filtered_objects]
+                queryset = self.model.objects.filter(id__in=object_ids)
+            else:
+                queryset = self.model.objects.none()
+        
+        # Применяем сортировку
+        order_by = self.request.GET.get('order_by', '')
+        direction = self.request.GET.get('direction', 'asc')  # 'asc' или 'desc'
+        
+        if order_by:
+            # Проверяем, существует ли поле
+            try:
+                field_exists = False
+                for field in self.model._meta.get_fields():
+                    if field.name == order_by and not field.many_to_many and not field.auto_created:
+                        field_exists = True
+                        break
+                
+                if field_exists:
+                    if direction == 'desc':
+                        order_by_field = f'-{order_by}'
+                    else:
+                        order_by_field = order_by
+                    
+                    queryset = queryset.order_by(order_by_field)
+            except:
+                # Если поле не существует или ошибка сортировки, не сортируем
+                pass
         
         return queryset
     
@@ -496,6 +567,8 @@ class UniversalTableView(LoginRequiredMixin, ListView):
             context['fields'] = fields
             context['model_name'] = self.model._meta.model_name
             context['search_query'] = self.request.GET.get('search', '')
+            context['current_order_by'] = self.request.GET.get('order_by', '')
+            context['current_direction'] = self.request.GET.get('direction', 'asc')
             
             # Проверяем права доступа
             context['has_add_permission'] = self.request.user.has_perm(f'core.add_{self.model._meta.model_name}')
@@ -504,6 +577,7 @@ class UniversalTableView(LoginRequiredMixin, ListView):
         
         return context
     
+
 class UniversalCreateView(LoginRequiredMixin, CreateView):
     """Универсальный View для создания записей"""
     template_name = 'core/create_form.html'
@@ -512,13 +586,21 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
     form_class = None
     
     def get_form_class(self):
-        # Для модели Dish используем специальный Form
+        # Для специфических моделей используем свои формы
         if self.model == Dish:
             return DishForm
+        elif self.model == Report:
+            return ReportForm
+        elif self.model == Request:
+            return RequestForm
+        elif self.model == Delivery:
+            return DeliveryForm
+        elif self.model == WorkBook:
+            return WorkBookForm
+        elif self.model == Employee:
+            return EmployeeForm
         # Для всех остальных моделей используем универсальный Form
         else:
-            # Динамически создаем форму с универсальным классом
-            from .forms import UniversalForm
             class DynamicForm(UniversalForm):
                 class Meta:
                     model = self.model
@@ -551,7 +633,10 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
             # Присваиваем их ManyToMany полю
             self.object.ingredients.set(selected_ingredients)
         
-        # Для других моделей с ManyToMany полями добавьте обработку при необходимости
+        # Проверяем, была ли нажата кнопка "сохранить и добавить еще"
+        if 'action' in self.request.POST and self.request.POST['action'] == 'save_and_add':
+            # Если да, то перенаправляем на ту же страницу создания
+            return redirect(self.request.path)
         
         return response
     
@@ -562,7 +647,6 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
             return redirect('dashboard')
         return super().dispatch(request, *args, **kwargs)
 
-
 class UniversalUpdateView(LoginRequiredMixin, UpdateView):
     """Универсальный View для редактирования записей"""
     template_name = 'core/create_form.html'
@@ -571,12 +655,21 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
     form_class = None
     
     def get_form_class(self):
-        # Для модели Dish используем специальный Form
+        # Для специфических моделей используем свои формы
         if self.model == Dish:
             return DishForm
+        elif self.model == Report:
+            return ReportForm
+        elif self.model == Request:
+            return RequestForm
+        elif self.model == Delivery:
+            return DeliveryForm
+        elif self.model == WorkBook:
+            return WorkBookForm
+        elif self.model == Employee:
+            return EmployeeForm
         # Для всех остальных моделей используем универсальный Form
         else:
-            from .forms import UniversalForm
             class DynamicForm(UniversalForm):
                 class Meta:
                     model = self.model
@@ -645,20 +738,6 @@ class UniversalDeleteView(LoginRequiredMixin, DeleteView):
             return redirect('dashboard')
         return super().dispatch(request, *args, **kwargs)
 
-
-import re
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.db import connection
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
-from django.http import HttpResponse
-from .models import *
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
-from openpyxl.utils import get_column_letter
 
 @login_required
 def sql_query_page(request):
@@ -734,6 +813,7 @@ def sql_query_page(request):
         'template_queries': template_queries
     })
 
+
 def export_sql_results_to_excel(sql_query, user):
     """Экспортирует результаты SQL запроса в Excel файл"""
     # Проверяем, что запрос является SELECT
@@ -797,13 +877,13 @@ def export_sql_results_to_excel(sql_query, user):
     except Exception as e:
         return HttpResponse(f'Ошибка экспорта: {str(e)}', status=500)
 
+
 def get_available_models_for_user(user):
     """Возвращает список доступных моделей в зависимости от роли пользователя"""
     models_list = []
     
     if user.groups.filter(name='Директор').exists() or user.is_superuser:
         # Директор имеет доступ ко всем моделям
-        from django.apps import apps
         app_models = apps.get_app_config('core').get_models()
         for model in app_models:
             model_name = model._meta.model_name
@@ -885,6 +965,7 @@ def get_available_models_for_user(user):
     
     return models_list
 
+
 def get_template_queries_for_user(user):
     """Возвращает шаблоны SQL запросов в зависимости от роли пользователя"""
     templates = []
@@ -957,9 +1038,9 @@ def is_valid_select_query(sql_query):
     sql_query = sql_query.strip().upper()
     return sql_query.startswith('SELECT ')
 
+
 def is_query_using_allowed_tables(sql_query, allowed_models):
     """Проверяет, что запрос использует только разрешенные таблицы"""
-    import re
     
     # Получаем список разрешенных имен таблиц (моделей)
     allowed_table_names = [model['name'] for model in allowed_models]
@@ -985,13 +1066,11 @@ def is_query_using_allowed_tables(sql_query, allowed_models):
     
     return True
 
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
-from django.contrib import messages
 
 def miscellaneous_page(request):
     """Страница "Разное" """
     return render(request, 'core/miscellaneous.html')
+
 
 def settings_page(request):
     """Страница настроек"""
@@ -999,23 +1078,36 @@ def settings_page(request):
         # Обработка настроек
         font_size = request.POST.get('font_size', 'normal')
         language = request.POST.get('language', 'ru')
+        theme = request.POST.get('theme', 'light')  # Добавляем обработку темы
         
         # Сохраняем настройки в сессии
         request.session['font_size'] = font_size
         request.session['language'] = language
+        request.session['theme'] = theme  # Сохраняем тему
         
-        messages.success(request, 'Настройки сохранены!')
-        return redirect('settings')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # Если AJAX запрос, возвращаем JSON
+            return JsonResponse({'status': 'success', 'message': 'Настройки сохранены!'})
+        else:
+            # Если обычный запрос, возвращаем редирект
+            messages.success(request, 'Настройки сохранены!')
+            return redirect('settings')
     
     # Загружаем текущие настройки
     font_size = request.session.get('font_size', 'normal')
     language = request.session.get('language', 'ru')
+    theme = request.session.get('theme', 'light')  # Загружаем текущую тему
     
     context = {
         'font_size': font_size,
-        'language': language
+        'language': language,
+        'theme': theme  # Передаем тему в контекст
     }
     return render(request, 'core/settings.html', context)
+
+
+
+
 
 def change_password(request):
     """Страница смены пароля"""
@@ -1035,27 +1127,6 @@ def change_password(request):
         'form': form
     })
 
-import json
-import plotly
-import plotly.graph_objs as go
-from plotly.offline import plot
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Sum, Avg, F
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from datetime import datetime, timedelta
-import io
-from django.core.serializers.json import DjangoJSONEncoder
-import pandas as pd
-from django.db import models
-from .models import *
-import matplotlib
-matplotlib.use('Agg')  # Используем backend без GUI
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-# Исправленный импорт - убираем Extract
-from django.db.models.functions import ExtractMonth, ExtractYear
 
 @login_required
 def analytics_dashboard(request):
@@ -1097,6 +1168,7 @@ def analytics_dashboard(request):
     
     return render(request, 'core/analytics.html', context)
 
+
 def get_available_analytics_data(user):
     """Возвращает доступные данные для аналитики в зависимости от роли пользователя"""
     data = {
@@ -1119,6 +1191,7 @@ def get_available_analytics_data(user):
         data['report_count'] = Report.objects.count()
     
     return data
+
 
 def generate_charts_data(user, start_date=None, end_date=None):
     """Генерирует данные для графиков с возможностью фильтрации по дате"""
@@ -1221,8 +1294,7 @@ def generate_charts_data(user, start_date=None, end_date=None):
     # График: Поставки по месяцам
     if user.has_perm('core.view_delivery'):
         try:
-            from django.db.models.functions import TruncMonth
-            from datetime import datetime, timedelta
+            
             
             # Применяем фильтр по дате к поставкам
             deliveries_query = Delivery.objects.all()
@@ -1290,6 +1362,7 @@ def generate_charts_data(user, start_date=None, end_date=None):
     
     return charts_data
 
+
 @csrf_exempt
 def update_charts_data(request):
     """Обновление данных графиков через AJAX"""
@@ -1319,15 +1392,11 @@ def update_charts_data(request):
 
 def export_chart(request, chart_id):
     """Экспорт графика в PNG"""
-    import io
-    from django.http import HttpResponse
     
-    # В зависимости от chart_id генерируем соответствующий график
+    
     fig, ax = plt.subplots(figsize=(10, 6))
     
-    # Здесь нужно получить данные для конкретного графика
-    # Пока используем заглушку, но в реальности нужно получить данные из БД
-    
+
     if chart_id == 'top_dishes_chart':
         try:
             top_dishes = ReportDish.objects.values('dish__name').annotate(
@@ -1398,10 +1467,8 @@ def export_chart(request, chart_id):
     
     elif chart_id == 'monthly_deliveries_chart':
         try:
-            from django.db.models.functions import TruncMonth
-            from datetime import datetime, timedelta
             
-            # Получаем последние 12 месяцев
+            
             start_date = datetime.now() - timedelta(days=365)
             
             # Группируем поставки по месяцам
@@ -1459,7 +1526,6 @@ def export_chart(request, chart_id):
     
     plt.tight_layout()
     
-    # Сохраняем в байтовый поток
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
     buffer.seek(0)

@@ -22,12 +22,20 @@ class GenderType(models.TextChoices):
     MALE = "Мужской"
     FEMALE = "Женский"
 
+    class Meta:
+        verbose_name = 'пол'
+        verbose_name_plural = 'Пола'
+
 
 class EventType(models.TextChoices):
 
     HIRING = "Прием"
     DISMISSAL = "Увольнение"
     TRANSFER = "Перевод"
+
+    class Meta:
+        verbose_name = 'тип события'
+        verbose_name_plural = 'Типы события'
 
 
 class AssortmentGroup(models.Model):
@@ -378,7 +386,7 @@ class Product(models.Model):
 
 class Delivery(models.Model):
 
-    date = models.DateTimeField(
+    date = models.DateField(
         null=False,
         verbose_name='Дата поставки',
     )
@@ -395,7 +403,7 @@ class Delivery(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return self.date.strftime('%d.%m.%Y %H:%M')
+        return self.date.strftime('%d.%m.%Y')
 
 
 class DeliveryProduct(models.Model):
@@ -445,7 +453,7 @@ class Division(models.Model):
 
 class Request(models.Model):
 
-    date = models.DateTimeField(
+    date = models.DateField(
         null=False,
         verbose_name='Дата заявки',
     )
@@ -461,7 +469,7 @@ class Request(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return self.date.strftime('%d.%m.%Y %H:%M')
+        return self.date.strftime('%d.%m.%Y')
 
 
 class RequestProduct(models.Model):
@@ -496,7 +504,7 @@ class RequestProduct(models.Model):
 
 class Report(models.Model):
 
-    date = models.DateTimeField(
+    date = models.DateField(
         null=False,
         verbose_name='Дата отчёта по реализации',
     )
@@ -507,7 +515,7 @@ class Report(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return self.date.strftime('%d.%m.%Y %H:%M')
+        return self.date.strftime('%d.%m.%Y')
 
 
 class ReportDish(models.Model):
@@ -583,7 +591,7 @@ class Employee(models.Model):
         verbose_name='Отчество'
     )
 
-    birthday_date = models.DateTimeField(
+    birthday_date = models.DateField(
         null=False,
         verbose_name='День рождения',
     )
@@ -743,7 +751,7 @@ class Classification(models.Model):
 
 class WorkBook(models.Model):
 
-    event_date = models.DateTimeField(
+    event_date = models.DateField(
         null=True,
         verbose_name='Дата записи',
     )

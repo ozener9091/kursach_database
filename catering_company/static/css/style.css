@@ -1,0 +1,124 @@
+.font-small {
+    font-size: 0.875rem !important;
+}
+
+.font-large {
+    font-size: 1.25rem !important;
+}
+
+.font-xlarge {
+    font-size: 1.5rem !important;
+}
+
+.dark-mode {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .card {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+    border-color: #444 !important;
+}
+
+.dark-mode .card-header {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+    border-bottom-color: #444 !important;
+}
+
+.dark-mode .table {
+    --bs-table-color: #ffffff;
+    --bs-table-bg: #2d2d2d;
+    --bs-table-border-color: #444;
+}
+
+.dark-mode .table-light {
+    --bs-table-color: #ffffff;
+    --bs-table-bg: #3a3a3a;
+    --bs-table-border-color: #444;
+}
+
+.dark-mode .form-control,
+.dark-mode .form-select {
+    background-color: #3a3a3a !important;
+    border-color: #555 !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .form-control:focus,
+.dark-mode .form-select:focus {
+    background-color: #4a4a4a !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .btn {
+    color: #ffffff !important;
+}
+
+.dark-mode .btn-outline-secondary {
+    color: #adb5bd !important;
+    border-color: #6c757d !important;
+}
+
+.dark-mode .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .breadcrumb {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .breadcrumb-item a {
+    color: #0d6efd !important;
+}
+
+.dark-mode .breadcrumb-item a:hover {
+    color: #0b5ed7 !important;
+}
+
+.dark-mode .modal-content {
+    background-color: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+.dark-mode .alert {
+    color: #ffffff !important;
+}
+
+.dark-mode .navbar {
+    background-color: #212529 !important;
+}
+
+.dark-mode .navbar-brand,
+.dark-mode .navbar-nav .nav-link {
+    color: #ffffff !important;
+}
+
+.dark-mode .navbar-nav .nav-link:hover {
+    color: #adb5bd !important;
+}
+
+.dark-mode .dropdown-menu {
+    background-color: #3a3a3a !important;
+    color: #ffffff !important;
+    border-color: #555 !important;
+}
+
+.dark-mode .dropdown-item {
+    color: #ffffff !important;
+}
+
+.dark-mode .dropdown-item:hover {
+    background-color: #4a4a4a !important;
+    color: #ffffff !important;
+}
+
+/* Для светлой темы */
+.light-mode {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}

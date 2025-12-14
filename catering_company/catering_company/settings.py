@@ -10,7 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -65,6 +67,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'django.template.context_processors.debug',
+                'core.context_processors.site_settings',
             ],
         },
     },
@@ -82,7 +85,7 @@ DATABASES = {
         'NAME': 'catering_company',
         'USER': 'postgres',
         'PASSWORD': '1111',
-        'HOST': '127.0.0.1',
+        'HOST': '192.168.0.14',
         'PORT': '5432',
     }
 }
@@ -168,3 +171,6 @@ MESSAGE_TAGS = {
     messages.WARNING: 'warning',
     messages.ERROR: 'danger',
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')

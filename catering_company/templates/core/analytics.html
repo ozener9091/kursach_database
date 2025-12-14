@@ -185,27 +185,46 @@
     </div>
 </div>
 
-<!-- Загружаем Plotly скрипт в конце body -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<!-- Подключаем Plotly перед JavaScript кодом -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
 // Функция отрисовки графиков
 function renderCharts() {
     {% for chart in charts_data %}
         (function() {  // Используем IIFE для изоляции переменных
-            const data = [{
-                x: {{ chart.x_data|safe }},
-                y: {{ chart.y_data|safe }},
-                type: '{{ chart.chart_type }}',
-                marker: {color: '{{ chart.color }}'},
-                line: {color: '{{ chart.color }}', width: 3}
-            }];
-            
-            const layout = {
-                title: '{{ chart.title|escapejs }}',
-                xaxis: {title: '{{ chart.x_label|escapejs }}'},
-                yaxis: {title: '{{ chart.y_label|escapejs }}'},
-                height: 400
-            };
+            {% if chart.chart_type == 'pie' %}
+                // Для круговой диаграммы
+                const data = [{
+                    values: {{ chart.values|safe }},
+                    labels: {{ chart.labels|safe }},
+                    type: 'pie',
+                    marker: {colors: [
+                        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+                    ]}
+                }];
+                
+                const layout = {
+                    title: '{{ chart.title|escapejs }}',
+                    height: 400
+                };
+            {% else %}
+                // Для других типов диаграмм (bar, line, scatter и т.д.)
+                const data = [{
+                    x: {{ chart.x_data|safe }},
+                    y: {{ chart.y_data|safe }},
+                    type: '{{ chart.chart_type }}',
+                    marker: {color: '{{ chart.color }}'},
+                    line: {color: '{{ chart.color }}', width: 3}
+                }];
+                
+                const layout = {
+                    title: '{{ chart.title|escapejs }}',
+                    xaxis: {title: '{{ chart.x_label|escapejs }}'},
+                    yaxis: {title: '{{ chart.y_label|escapejs }}'},
+                    height: 400
+                };
+            {% endif %}
             
             Plotly.newPlot('{{ chart.chart_id }}', data, layout);
         })();
@@ -288,10 +307,15 @@ function exportChart(chartId) {
     window.location.href = `/analytics/export/${chartId}/`;
 }
 
-
-// Запускаем проверку после загрузки DOM
+// Запускаем отрисовку графиков после загрузки DOM и Plotly
 document.addEventListener('DOMContentLoaded', function() {
-    waitForPlotly();
+    // Проверяем, загружен ли Plotly
+    if (typeof Plotly !== 'undefined') {
+        renderCharts();
+        console.log('Charts rendered successfully');
+    } else {
+        console.error('Plotly is not loaded');
+    }
 });
 
 // Функция для обновления графиков с фильтрами

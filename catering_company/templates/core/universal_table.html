@@ -92,7 +92,12 @@
                             <th width="50">#</th>
                             {% for field in fields %}
                             <th>
-                                {{ field.verbose_name|default:field.name|title }}
+                                <a href="#" onclick="sortBy('{{ field.name }}')" class="text-decoration-none">
+                                    {{ field.verbose_name|default:field.name|title }}
+                                    {% if current_order_by == field.name %}
+                                        {% if current_direction == 'asc' %} ↑ {% else %} ↓ {% endif %}
+                                    {% endif %}
+                                </a>
                                 <small class="text-muted d-block" style="font-size: 0.7em; font-weight: normal;">
                                     {% if field.type == 'foreign_key' %}↔️ Связь
                                     {% elif field.type == 'datetime' %}🕐 Дата/время
@@ -298,4 +303,31 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+function sortBy(fieldName) {
+    const currentOrderBy = "{{ current_order_by }}";
+    const currentDirection = "{{ current_direction }}";
+    let newDirection = "asc";
+    
+    // Если уже сортируем по этому полю, меняем направление
+    if (currentOrderBy === fieldName) {
+        newDirection = currentDirection === "asc" ? "desc" : "asc";
+    }
+    
+    // Собираем текущие параметры
+    let params = new URLSearchParams(window.location.search);
+    params.set('order_by', fieldName);
+    params.set('direction', newDirection);
+    
+    // Если был поиск, сохраняем его
+    if ("{{ search_query }}") {
+        params.set('search', "{{ search_query|escapejs }}");
+    }
+    
+    // Переходим по новому URL
+    window.location.search = params.toString();
+}
+</script>
+
 {% endblock %}

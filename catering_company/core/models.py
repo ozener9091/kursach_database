@@ -818,3 +818,95 @@ class WorkBook(models.Model):
             return f"{self.employee.last_name} - {self.event_date.strftime('%d.%m.%Y')}"
         return f"{self.employee.last_name} - запись"
 
+
+class ActionLog(models.Model):
+    """Модель для логирования действий пользователей"""
+    ACTION_CHOICES = [
+        ('login', 'Вход в систему'),
+        ('logout', 'Выход из системы'),
+        ('create', 'Создание записи'),
+        ('update', 'Изменение записи'),
+        ('delete', 'Удаление записи'),
+        ('view', 'Просмотр таблицы'),
+        ('download', 'Скачивание файла'),
+        ('export', 'Экспорт данных'),
+        ('import', 'Импорт данных'),
+        ('print', 'Печать'),
+    ]
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь'
+    )
+    
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES,
+        verbose_name='Действие'
+    )
+    
+    object_type = models.CharField(
+        max_length=50,
+        verbose_name='Тип объекта'
+    )
+    
+    object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='ID объекта'
+    )
+    
+    object_name = models.CharField(
+        max_length=200,
+        verbose_name='Название объекта'
+    )
+    
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name='IP адрес'
+    )
+    
+    user_agent = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='User Agent'
+    )
+    
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Время действия'
+    )
+    
+    details = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='Дополнительные сведения'
+    )
+    
+    class Meta:
+        verbose_name = 'действие пользователя'
+        verbose_name_plural = 'Действия пользователей'
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_action_display()} - {self.object_name}"
+
+    @property
+    def get_action_emoji(self):
+        """Возвращает эмодзи для действия"""
+        emojis = {
+            'login': '🔓',
+            'logout': '🔒',
+            'create': '➕',
+            'update': '✏️',
+            'delete': '🗑️',
+            'view': '👁️',
+            'download': '📥',
+            'export': '📤',
+            'import': '📥',
+            'print': '🖨️',
+        }
+        return emojis.get(self.action, '📝')
+

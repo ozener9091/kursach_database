@@ -5,19 +5,10 @@
 
 {% block content %}
 <div class="container">
-    <!-- Хлебные крошки -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'home' %}">🏠 Главная</a></li>
-            <li class="breadcrumb-item active" aria-current="page">📊 Панель управления</li>
-        </ol>
-    </nav>
-
     <!-- Заголовок и кнопки -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="mb-1">📊 Панель управления</h1>
-            <p class="text-muted mb-0">Добро пожаловать, {{ user.username }}!</p>
         </div>
         <div class="btn-group">
             <a href="{% url 'home' %}" class="btn btn-outline-secondary">
@@ -31,7 +22,6 @@
         </div>
     </div>
 
-    <!-- Информация о пользователе -->
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
@@ -81,7 +71,7 @@
                                         🚪 Выйти из системы
                                     </button>
                                 </form>
-                                <a href="{% url 'admin:password_change' %}" class="btn btn-outline-warning btn-sm">
+                                <a href="{% url 'change_password' %}" class="btn btn-outline-warning btn-sm">
                                     🔐 Сменить пароль
                                 </a>
                             </div>
@@ -180,10 +170,6 @@
         </div>
     </div>
         
-
-    <!-- Доступные таблицы по ролям -->
-    <h3 class="mb-3">📋 Таблицы данных</h3>
-
     <!-- Доступные таблицы по ролям -->
     <div class="row mb-4">
         <div class="col-12">
@@ -314,8 +300,7 @@
         </div>
     </div>
 
-    <!-- Последние действия -->
-    <div class="card mt-4">
+<div class="card mt-4">
         <div class="card-header bg-light">
             <h5 class="mb-0">🕐 Последние действия</h5>
         </div>
@@ -327,71 +312,37 @@
                             <th width="150">Дата и время</th>
                             <th>Действие</th>
                             <th>Объект</th>
-                            <th>Пользователь</th>
+                            <th>Дополнительно</th>
                         </tr>
                     </thead>
                     <tbody>
+                        {% for action in recent_actions %}
                         <tr>
-                            <td>{% now "d.m.Y H:i" %}</td>
-                            <td><span class="badge bg-success">Вход в систему</span></td>
-                            <td>Панель управления</td>
+                            <td>{{ action.timestamp|date:"d.m.Y H:i" }}</td>
                             <td>
-                                <span class="badge bg-primary">{{ user.username }}</span>
-                                {% if user.groups.first %}
-                                <span class="badge bg-secondary">{{ user.groups.first.name }}</span>
+                                <span class="badge bg-{% if action.action == 'login' %}success{% elif action.action == 'logout' %}secondary{% elif action.action == 'create' %}primary{% elif action.action == 'update' %}warning{% elif action.action == 'delete' %}danger{% else %}info{% endif %}">
+                                    {{ action.get_action_emoji }} {{ action.get_action_display }}
+                                </span>
+                            </td>
+                            <td>{{ action.object_name }}</td>
+                            <td>
+                                {% if action.details %}
+                                <small class="text-muted">{{ action.details }}</small>
+                                {% else %}
+                                <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
                         </tr>
-                        <!-- Пример других действий -->
+                        {% empty %}
                         <tr>
-                            <td>{% now "d.m.Y" %} 09:30</td>
-                            <td><span class="badge bg-info">Просмотр</span></td>
-                            <td>Список блюд</td>
-                            <td><span class="badge bg-primary">system</span></td>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                <div class="display-6">📭</div>
+                                <p>Нет записей о действиях</p>
+                            </td>
                         </tr>
-                        <tr>
-                            <td>{% now "d.m.Y" %} 09:15</td>
-                            <td><span class="badge bg-warning">Изменение</span></td>
-                            <td>Ингредиент "Мясо"</td>
-                            <td><span class="badge bg-primary">chef</span></td>
-                        </tr>
-                        <tr>
-                            <td>{% now "d.m.Y" %} 09:00</td>
-                            <td><span class="badge bg-success">Добавление</span></td>
-                            <td>Новый сотрудник</td>
-                            <td><span class="badge bg-primary">hr_manager</span></td>
-                        </tr>
-                        <tr>
-                            <td>{% now "d.m.Y" %} 08:45</td>
-                            <td><span class="badge bg-primary">Поставка</span></td>
-                            <td>Продукты от "Поставщик А"</td>
-                            <td><span class="badge bg-primary">manager</span></td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Информация о системе -->
-    <div class="alert alert-light mt-4">
-        <div class="row">
-            <div class="col-md-6">
-                <h6>ℹ️ Информация о системе</h6>
-                <p class="small mb-1">
-                    <strong>Система управления рестораном</strong><br>
-                    Версия: 1.0.0<br>
-                    Дата: {% now "d.m.Y" %}<br>
-                </p>
-            </div>
-            <div class="col-md-6">
-                <h6>🔑 Права доступа</h6>
-                <p class="small mb-1">
-                    <span class="badge bg-success">✅</span> Доступно<br>
-                    <span class="badge bg-warning">✏️</span> Изменение<br>
-                    <span class="badge bg-danger">🗑️</span> Удаление<br>
-                    <span class="badge bg-secondary">📋</span> Просмотр
-                </p>
             </div>
         </div>
     </div>

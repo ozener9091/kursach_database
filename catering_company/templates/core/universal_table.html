@@ -5,25 +5,7 @@
 
 {% block content %}
 <div class="container">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
-            <li class="breadcrumb-item">
-                {% if user.groups.first.name == 'Директор' %}
-                <a href="{% url 'director_tables' %}">Все таблицы</a>
-                {% elif user.groups.first.name == 'Менеджер' %}
-                <a href="{% url 'manager_tables' %}">Таблицы менеджера</a>
-                {% elif user.groups.first.name == 'Шеф-повар' %}
-                <a href="{% url 'chef_tables' %}">Таблицы шеф-повара</a>
-                {% elif user.groups.first.name == 'Менеджер по кадрам' %}
-                <a href="{% url 'hr_tables' %}">Таблицы HR</a>
-                {% endif %}
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">{{ table_title }}</li>
-        </ol>
-    </nav>
 
-    <!-- Заголовок и кнопки -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="mb-1">{{ table_title }}</h1>
@@ -52,7 +34,6 @@
         </div>
     </div>
 
-    <!-- Поиск и фильтры -->
     <div class="card mb-4">
         <div class="card-body">
             <form method="get" class="row g-3">
@@ -98,16 +79,6 @@
                                         {% if current_direction == 'asc' %} ↑ {% else %} ↓ {% endif %}
                                     {% endif %}
                                 </a>
-                                <small class="text-muted d-block" style="font-size: 0.7em; font-weight: normal;">
-                                    {% if field.type == 'foreign_key' %}↔️ Связь
-                                    {% elif field.type == 'datetime' %}🕐 Дата/время
-                                    {% elif field.type == 'date' %}📅 Дата
-                                    {% elif field.type == 'boolean' %}✅ Да/Нет
-                                    {% elif field.type == 'image' %}🖼️ Изображение
-                                    {% elif field.type == 'decimal' %}💰 Число
-                                    {% elif field.type == 'choice' %}📋 Выбор
-                                    {% else %}📝 Текст{% endif %}
-                                </small>
                             </th>
                             {% endfor %}
                             {% if has_change_permission or has_delete_permission %}
@@ -123,9 +94,7 @@
                             <td>
                                 {% with value=object|get_attribute:field.name %}
                                     {% if field.type == 'foreign_key' and value %}
-                                        <span class="badge bg-primary" title="Связанный объект">
-                                            {{ value|truncatechars:30 }}
-                                        </span>
+                                        {{ value|truncatechars:30 }}
                                     {% elif field.type == 'datetime' and value %}
                                         {{ value|date:"d.m.Y H:i" }}
                                     {% elif field.type == 'date' and value %}

@@ -8,36 +8,26 @@
         <h1 class="display-4 fw-bold mb-4">Добро пожаловать в систему управления рестораном!</h1>
         <p class="lead mb-4">Профессиональная система для управления предприятием общественного питания. Учет блюд, поставок, сотрудников и многое другое.</p>
         
-        {% if not user.is_authenticated %}
-        <div class="d-grid gap-2 d-md-flex">
-            <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4 me-md-2">
-                🔑 Войти в систему
-            </a>
-            <a href="#features" class="btn btn-outline-secondary btn-lg px-4">
-                📋 Возможности
-            </a>
-        </div>
-        {% else %}
         <div class="d-grid gap-2 d-md-flex">
             <a href="{% url 'dashboard' %}" class="btn btn-success btn-lg px-4 me-md-2">
-                📊 Перейти в панель управления
+                Перейти в панель управления
             </a>
             <a href="#features" class="btn btn-outline-primary btn-lg px-4">
-                📋 Возможности
+                Возможности
             </a>
         </div>
-        {% endif %}
+
     </div>
     
     <div class="col-md-6 text-center">
         <div class="card border-0 shadow-lg">
             <div class="card-body p-4">
-                <h5 class="card-title mb-3">🏢 Ролевая система доступа</h5>
+                <h5 class="card-title mb-3">Ролевая система доступа</h5>
                 <div class="row g-3">
                     <div class="col-6">
                         <div class="card h-100 border-primary">
                             <div class="card-body">
-                                <h6>👑 Директор</h6>
+                                <h6>Директор</h6>
                                 <p class="small">Полный доступ ко всем функциям</p>
                             </div>
                         </div>
@@ -45,7 +35,7 @@
                     <div class="col-6">
                         <div class="card h-100 border-success">
                             <div class="card-body">
-                                <h6>📊 Менеджер</h6>
+                                <h6>Менеджер</h6>
                                 <p class="small">Управление меню и поставками</p>
                             </div>
                         </div>
@@ -53,7 +43,7 @@
                     <div class="col-6">
                         <div class="card h-100 border-warning">
                             <div class="card-body">
-                                <h6>👨‍🍳 Шеф-повар</h6>
+                                <h6>Шеф-повар</h6>
                                 <p class="small">Работа с меню и ингредиентами</p>
                             </div>
                         </div>
@@ -61,7 +51,7 @@
                     <div class="col-6">
                         <div class="card h-100 border-info">
                             <div class="card-body">
-                                <h6>👥 HR менеджер</h6>
+                                <h6>HR менеджер</h6>
                                 <p class="small">Управление персоналом</p>
                             </div>
                         </div>
@@ -76,7 +66,7 @@
 
 <div class="row mt-5">
     <div class="col-12">
-        <h2 class="text-center mb-5">📋 Основные возможности системы</h2>
+        <h2 class="text-center mb-5">Основные возможности системы</h2>
     </div>
     
     <div class="col-md-3 mb-4">

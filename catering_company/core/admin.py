@@ -3,7 +3,6 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User, Group
 from .models import (
-    AbbreviationType, GenderType, EventType,
     AssortmentGroup, UnitOfMeasurement, Ingredient, Dish,
     Bank, Country, City, Street, Provider, Product,
     Delivery, DeliveryProduct, Division, Request, RequestProduct,
@@ -11,6 +10,7 @@ from .models import (
     Department, Profession, Specialization, Classification, WorkBook
 )
 
+User = get_user_model()
 
 class GroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'get_permissions_count')
@@ -23,8 +23,6 @@ class GroupAdmin(admin.ModelAdmin):
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 
-User = get_user_model()
-
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
@@ -34,7 +32,6 @@ class CustomUserAdmin(UserAdmin):
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
 
-# Админ-классы для моделей
 @admin.register(AssortmentGroup)
 class AssortmentGroupAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')

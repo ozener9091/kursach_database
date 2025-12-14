@@ -1,4 +1,3 @@
-# core/permissions.py
 from django.contrib.auth.mixins import PermissionRequiredMixin, UserPassesTestMixin
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -15,11 +14,9 @@ class RoleRequiredMixin(UserPassesTestMixin):
         if not user.is_authenticated:
             return False
         
-        # Проверка по группам
         if self.role_name:
             return user.groups.filter(name=self.role_name).exists()
         
-        # Проверка по permissions
         if self.permission_required:
             if isinstance(self.permission_required, str):
                 return user.has_perm(self.permission_required)
@@ -32,7 +29,6 @@ class RoleRequiredMixin(UserPassesTestMixin):
         return redirect(self.login_url)
 
 
-# Конкретные миксины для каждой роли
 class DirectorRequiredMixin(RoleRequiredMixin):
     role_name = 'Директор'
 
@@ -46,7 +42,6 @@ class HRManagerRequiredMixin(RoleRequiredMixin):
     role_name = 'Менеджер по кадрам'
 
 
-# Миксины для конкретных действий
 class ViewPermissionMixin(PermissionRequiredMixin):
     def get_permission_required(self):
         model_name = self.model._meta.model_name

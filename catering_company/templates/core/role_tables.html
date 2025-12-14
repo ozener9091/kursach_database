@@ -4,13 +4,6 @@
 
 {% block content %}
 <div class="container">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
-        </ol>
-    </nav>
-
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="mb-1">{{ title }}</h1>
@@ -79,7 +72,6 @@
                     </p>
                     
                     <div class="d-grid gap-2">
-                        <!-- Проверяем существование URL перед созданием ссылки -->
                         {% url table.url as table_url %}
                         {% if table_url %}
                         <a href="{% url 'table_'|add:table.name %}" class="btn btn-outline-primary">
@@ -91,7 +83,6 @@
                         </button>
                         {% endif %}
                         
-                        <!-- Ссылка на добавление через вашу собственную форму -->
                         {% with add_perm='core.add_'|add:table.name %}
                         {% if perms.core|add:table.name|add:'_add' %}
                         <a href="{% url 'add_'|add:table.name %}" class="btn btn-outline-success btn-sm">
@@ -100,19 +91,6 @@
                         {% endif %}
                         {% endwith %}
                     </div>
-                </div>
-                <div class="card-footer bg-transparent border-top-0 pt-0">
-                    <small class="text-muted">
-                        {% if perms|add:'core.add_'|add:table.name %}
-                        <span class="text-success">➕ Добавление</span>
-                        {% endif %}
-                        {% if perms|add:'core.change_'|add:table.name %}
-                        <span class="text-warning">✏️ Изменение</span>
-                        {% endif %}
-                        {% if perms|add:'core.delete_'|add:table.name %}
-                        <span class="text-danger">🗑️ Удаление</span>
-                        {% endif %}
-                    </small>
                 </div>
             </div>
         </div>

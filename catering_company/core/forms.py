@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth import get_user_model
 from django.forms import ModelForm, ModelMultipleChoiceField
-from .models import Dish, Ingredient, Report, Request, Delivery, WorkBook, Employee, WorkBook
+from .models import *
 User = get_user_model()
 
 class CustomUserCreationForm(UserCreationForm):
@@ -52,7 +52,6 @@ class DishForm(ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Убедимся, что для редактирования ManyToMany поле заполняется
         if self.instance and self.instance.pk:
             self.fields['ingredients'].initial = self.instance.ingredients.all()
 
@@ -61,7 +60,7 @@ class RequestForm(ModelForm):
         model = Request
         fields = '__all__'
         widgets = {
-            'date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'date': forms.DateInput(attrs={'type': 'date-local', 'class': 'form-control'}),
             'division': forms.Select(attrs={'class': 'form-select'}),
         }
 
@@ -70,7 +69,7 @@ class DeliveryForm(ModelForm):
         model = Delivery
         fields = '__all__'
         widgets = {
-            'date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'date': forms.DateInput(attrs={'type': 'date-local', 'class': 'form-control'}),
             'provider': forms.Select(attrs={'class': 'form-select'}),
         }
 
@@ -79,7 +78,7 @@ class ReportForm(ModelForm):
         model = Report
         fields = '__all__'
         widgets = {
-            'date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'date': forms.DateInput(attrs={'type': 'date-local', 'class': 'form-control'}),
         }
 
 class WorkBookForm(ModelForm):
@@ -87,7 +86,7 @@ class WorkBookForm(ModelForm):
         model = WorkBook
         fields = '__all__'
         widgets = {
-            'event_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'event_date': forms.DateInput(attrs={'type': 'date-local', 'class': 'form-control'}),
             'reason_for_dismissal': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'event_type': forms.Select(attrs={'class': 'form-select'}),
             'number': forms.TextInput(attrs={'class': 'form-control'}),
@@ -108,7 +107,7 @@ class EmployeeForm(ModelForm):
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'middle_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'birthday_date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'birthday_date': forms.DateInput(attrs={'type': 'date-local', 'class': 'form-control'}),
             'house_number': forms.TextInput(attrs={'class': 'form-control'}),
             'work_experience': forms.TextInput(attrs={'class': 'form-control'}),
             'gender': forms.Select(attrs={'class': 'form-select'}),
@@ -121,19 +120,14 @@ class EmployeeForm(ModelForm):
 class UniversalForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Добавляем Bootstrap классы ко всем полям
         for field_name, field in self.fields.items():
             if not isinstance(field, ModelMultipleChoiceField):
-                # Для полей даты используем специальный виджет
-                if isinstance(field, forms.DateTimeField):
-                    field.widget = forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'})
-                elif isinstance(field, forms.DateField):
+                if isinstance(field, forms.DateField):
                     field.widget = forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
                 elif isinstance(field, forms.TimeField):
                     field.widget = forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'})
                 else:
                     field.widget.attrs.update({'class': 'form-control'})
-                    # Для числовых полей устанавливаем шаг
                     if isinstance(field, forms.DecimalField) or isinstance(field, forms.FloatField):
                         field.widget.attrs.update({'step': 'any'})
                     elif isinstance(field, forms.IntegerField):

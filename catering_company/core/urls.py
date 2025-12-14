@@ -1,6 +1,5 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from . import views
 from django.apps import apps
 from . import views
 
@@ -46,28 +45,24 @@ for model in app_models:
         {'model': model}
     )
     
-    # View для создания
     create_view_class = type(
         f'{model_name.title()}CreateView',
         (views.UniversalCreateView,),
         {'model': model}
     )
     
-    # View для редактирования
     update_view_class = type(
         f'{model_name.title()}UpdateView',
         (views.UniversalUpdateView,),
         {'model': model}
     )
     
-    # View для удаления
     delete_view_class = type(
         f'{model_name.title()}DeleteView',
         (views.UniversalDeleteView,),
         {'model': model}
     )
     
-    # Добавляем URL pattern
     urlpatterns.extend([
         path(f'table/{model_name}/', view_class.as_view(), name=f'table_{model_name}'),
         path(f'table/{model_name}/add/', create_view_class.as_view(), name=f'add_{model_name}'),

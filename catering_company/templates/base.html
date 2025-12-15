@@ -7,6 +7,22 @@
     <title>{% block title %}Система управления рестораном{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* Стили для фиксации футера внизу страницы */
+        html, body {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        .main-content {
+            flex: 1 0 auto;
+        }
+        .footer {
+            flex-shrink: 0;
+        }
+    </style>
 </head>
 <body class="{{ current_font_class }}">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -82,20 +98,22 @@
         </div>
     </nav>
 
-    <div class="container mt-4 mb-5">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-        
-        {% block content %}{% endblock %}
+    <div class="main-content">
+        <div class="container mt-4">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </div>
     </div>
 
-    <footer class="bg-dark text-white py-3 mt-auto">
+    <footer class="footer bg-dark text-white py-3 mt-5">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">

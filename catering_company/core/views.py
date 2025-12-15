@@ -816,27 +816,37 @@ class UniversalTableView(LoginRequiredMixin, ListView):
             context['has_delete_permission'] = self.request.user.has_perm(f'core.delete_{self.model._meta.model_name}')
         
         return context
-    
+
 class UniversalCreateView(LoginRequiredMixin, CreateView):
+    """Универсальный View для создания записей"""
     template_name = 'core/create_form.html'
     model = None
     fields = '__all__'
     form_class = None
     
     def get_form_class(self):
+        # Для модели Dish используем специальный Form
         if self.model == Dish:
+            from .forms import DishForm
             return DishForm
         elif self.model == Report:
+            from .forms import ReportForm
             return ReportForm
         elif self.model == Request:
+            from .forms import RequestForm
             return RequestForm
         elif self.model == Delivery:
+            from .forms import DeliveryForm
             return DeliveryForm
         elif self.model == WorkBook:
+            from .forms import WorkBookForm
             return WorkBookForm
         elif self.model == Employee:
+            from .forms import EmployeeForm
             return EmployeeForm
+        # Для всех остальных моделей используем универсальный Form
         else:
+            from .forms import UniversalForm
             class DynamicForm(UniversalForm):
                 class Meta:
                     model = self.model
@@ -844,8 +854,9 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
             return DynamicForm
     
     def get_success_url(self):
+        # Проверяем, была ли нажата кнопка "сохранить и добавить еще"
         if 'action' in self.request.POST and self.request.POST['action'] == 'save_and_add':
-            return self.request.path
+            return self.request.path  # Остаемся на той же странице
         else:
             return reverse_lazy(f'table_{self.model._meta.model_name}')
     
@@ -855,46 +866,71 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
         context['model_name'] = self.model._meta.model_name
         context['verbose_name'] = self.model._meta.verbose_name
         context['is_create'] = True
+        
+        # Для модели Dish добавляем специальные данные
+        if self.model == Dish:
+            all_ingredients = Ingredient.objects.all()
+            selected_ingredients = []  # Нет выбранных ингредиентов при создании
+            available_ingredients = all_ingredients
+            context['selected_ingredients'] = selected_ingredients
+            context['available_ingredients'] = available_ingredients
+        
         return context
     
     def form_valid(self, form):
+        # Сохраняем объект
         response = super().form_valid(form)
         
+        # Обрабатываем ManyToMany связи
         if self.model == Dish:
+            # Получаем выбранные ингредиенты из формы
             selected_ingredients = form.cleaned_data.get('ingredients', [])
+            # Присваиваем их ManyToMany полю
             self.object.ingredients.set(selected_ingredients)
         
+        # Проверяем, была ли нажата кнопка "сохранить и добавить еще"
         if 'action' in self.request.POST and self.request.POST['action'] == 'save_and_add':
             return redirect(self.request.path)
         
         return response
     
     def dispatch(self, request, *args, **kwargs):
+        # Проверяем права на добавление
         if not request.user.has_perm(f'core.add_{self.model._meta.model_name}'):
             messages.error(request, 'У вас нет прав для добавления записей в эту таблицу')
             return redirect('dashboard')
         return super().dispatch(request, *args, **kwargs)
 
 class UniversalUpdateView(LoginRequiredMixin, UpdateView):
+    """Универсальный View для редактирования записей"""
     template_name = 'core/create_form.html'
     model = None
     fields = '__all__'
     form_class = None
     
     def get_form_class(self):
+        # Для модели Dish используем специальный Form
         if self.model == Dish:
+            from .forms import DishForm
             return DishForm
         elif self.model == Report:
+            from .forms import ReportForm
             return ReportForm
         elif self.model == Request:
+            from .forms import RequestForm
             return RequestForm
         elif self.model == Delivery:
+            from .forms import DeliveryForm
             return DeliveryForm
         elif self.model == WorkBook:
+            from .forms import WorkBookForm
             return WorkBookForm
         elif self.model == Employee:
+            from .forms import EmployeeForm
             return EmployeeForm
+        # Для всех остальных моделей используем универсальный Form
         else:
+            from .forms import UniversalForm
             class DynamicForm(UniversalForm):
                 class Meta:
                     model = self.model
@@ -910,23 +946,46 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
         context['model_name'] = self.model._meta.model_name
         context['verbose_name'] = self.model._meta.verbose_name
         context['is_create'] = False
+        
+        # Для модели Dish добавляем специальные данные
+        if self.model == Dish:
+            all_ingredients = Ingredient.objects.all()
+            selected_ingredients = self.object.ingredients.all()
+            available_ingredients = all_ingredients.exclude(
+                id__in=selected_ingredients.values_list('id', flat=True)
+            )
+            context['selected_ingredients'] = selected_ingredients
+            context['available_ingredients'] = available_ingredients
+        
         return context
     
     def form_valid(self, form):
+        # Сохраняем объект
         response = super().form_valid(form)
         
+        # Обрабатываем ManyToMany связи
         if self.model == Dish:
+            # Получаем выбранные ингредиенты из формы
             selected_ingredients = form.cleaned_data.get('ingredients', [])
+            # Присваиваем их ManyToMany полю
             self.object.ingredients.set(selected_ingredients)
         
         return response
     
     def dispatch(self, request, *args, **kwargs):
+        # Проверяем права на изменение
         if not request.user.has_perm(f'core.change_{self.model._meta.model_name}'):
             messages.error(request, 'У вас нет прав для изменения записей в этой таблице')
             return redirect('dashboard')
         return super().dispatch(request, *args, **kwargs)
     
+    def get_form_kwargs(self):
+        """Переопределяем метод для передачи instance"""
+        kwargs = super().get_form_kwargs()
+        if hasattr(self, 'object') and self.object:
+            kwargs['instance'] = self.object
+        return kwargs
+
 class UniversalDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'core/delete_confirm.html'
     model = None

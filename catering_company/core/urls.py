@@ -16,7 +16,7 @@ urlpatterns = [
         template_name='core/logout.html'
     ), name='logout'),
     path('password-reset/', views.password_reset_request, name='password_reset'),
-    
+
     path('tables/director/', views.director_tables, name='director_tables'),
     path('tables/manager/', views.manager_tables, name='manager_tables'),
     path('tables/chef/', views.chef_tables, name='chef_tables'),
@@ -29,8 +29,6 @@ urlpatterns = [
     path('settings/', views.settings_page, name='settings'),
     path('change-password/', views.change_password, name='change_password'),
     path('analytics/', views.analytics_dashboard, name='analytics'),
-    path('analytics/update/', views.update_charts_data, name='update_charts'),
-    path('analytics/export/<str:chart_id>/', views.export_chart, name='export_chart'),
 ]
 
 for model in app_models:

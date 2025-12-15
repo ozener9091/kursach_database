@@ -9,11 +9,12 @@
         height: 400px;
         margin-bottom: 20px;
     }
-    .export-buttons {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
+    .chart-card {
+        transition: transform 0.2s ease-in-out;
+    }
+    .chart-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
     }
 </style>
 {% endblock %}
@@ -42,7 +43,7 @@
             <h5 class="mb-0">⚙️ Фильтры данных</h5>
         </div>
         <div class="card-body">
-            <form id="analytics-filters">
+            <form id="analytics-filters" method="get">
                 <div class="row">
                     <div class="col-md-3">
                         <label class="form-label">Начальная дата</label>
@@ -63,12 +64,12 @@
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <div class="btn-group w-100">
-                            <button type="button" class="btn btn-primary" id="apply-filters">
+                            <button type="submit" class="btn btn-primary" id="apply-filters">
                                 🔄 Применить
                             </button>
-                            <button type="button" class="btn btn-outline-secondary" id="reset-filters">
+                            <a href="{% url 'analytics' %}" class="btn btn-outline-secondary" id="reset-filters">
                                 Сбросить
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -76,82 +77,16 @@
         </div>
     </div>
 
-    <!-- Статистика -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-white bg-primary">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h5 class="card-title">🍽️ Блюда</h5>
-                            <h2 class="card-text">{{ available_data.dish_count|default:0 }}</h2>
-                        </div>
-                        <div class="display-5">🍽️</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h5 class="card-title">📦 Продукты</h5>
-                            <h2 class="card-text">{{ available_data.product_count|default:0 }}</h2>
-                        </div>
-                        <div class="display-5">📦</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-info">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h5 class="card-title">👥 Сотрудники</h5>
-                            <h2 class="card-text">{{ available_data.employee_count|default:0 }}</h2>
-                        </div>
-                        <div class="display-5">👥</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-warning">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h5 class="card-title">📊 Отчеты</h5>
-                            <h2 class="card-text">{{ available_data.report_count|default:0 }}</h2>
-                        </div>
-                        <div class="display-5">📊</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Графики -->
     <div class="row">
         {% for chart in charts_data %}
         <div class="col-lg-6 mb-4">
-            <div class="card">
+            <div class="card chart-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ chart.title }}</h5>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('{{ chart.chart_id }}')">
-                            📥 PNG
-                        </button>
-                    </div>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <div class="export-buttons">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportChart('{{ chart.chart_id }}')">
-                                📥 PNG
-                            </button>
-                        </div>
                         <div id="{{ chart.chart_id }}"></div>
                     </div>
                 </div>
@@ -166,26 +101,8 @@
         </div>
         {% endfor %}
     </div>
-
-    <!-- Обновление данных -->
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0">🔄 Обновление данных</h5>
-        </div>
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="mb-0">Данные обновляются автоматически. Последнее обновление: <span id="last-update">{{ date_range.end }}</span></p>
-                </div>
-                <button class="btn btn-outline-primary" id="refresh-data">
-                    🔄 Обновить данные
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- Подключаем Plotly перед JavaScript кодом -->
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
 // Функция отрисовки графиков
@@ -231,53 +148,6 @@ function renderCharts() {
     {% endfor %}
 }
 
-// Функция обновления графиков
-function updateCharts() {
-    const startDate = document.getElementById('start_date').value;
-    const endDate = document.getElementById('end_date').value;
-    
-    const formData = new FormData();
-    formData.append('start_date', startDate);
-    formData.append('end_date', endDate);
-    
-    // Показываем индикатор загрузки
-    document.querySelectorAll('.chart-container').forEach(container => {
-        container.innerHTML += '<div class="loading-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;z-index:1000;"><div class="spinner-border" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-    });
-    
-    fetch('{% url "update_charts" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.error('Error:', data.error);
-            alert('Ошибка обновления данных: ' + data.error);
-            // Убираем индикатор загрузки
-            document.querySelectorAll('.loading-overlay').forEach(overlay => overlay.remove());
-            return;
-        }
-        
-        // Обновляем графики (в реальной реализации)
-        // Пока просто обновляем страницу
-        location.reload();
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Ошибка при обновлении данных');
-        // Убираем индикатор загрузки
-        document.querySelectorAll('.loading-overlay').forEach(overlay => overlay.remove());
-    });
-}
-
-// Обработчики событий
-document.getElementById('apply-filters').addEventListener('click', updateCharts);
-document.getElementById('refresh-data').addEventListener('click', updateCharts);
-
 // Обработчик выбора периода
 document.getElementById('time_period').addEventListener('change', function() {
     const days = parseInt(this.value);
@@ -290,22 +160,10 @@ document.getElementById('time_period').addEventListener('change', function() {
 });
 
 // Обработчик сброса фильтров
-document.getElementById('reset-filters').addEventListener('click', function() {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30);
-    
-    document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
-    document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
-    document.getElementById('time_period').value = '30';
-    
-    // Не обновляем графики автоматически
+document.getElementById('reset-filters').addEventListener('click', function(e) {
+    // При сбросе переходим на основной URL без параметров
+    window.location.href = '{% url "analytics" %}';
 });
-
-// Функция экспорта графика (только PNG)
-function exportChart(chartId) {
-    window.location.href = `/analytics/export/${chartId}/`;
-}
 
 // Запускаем отрисовку графиков после загрузки DOM и Plotly
 document.addEventListener('DOMContentLoaded', function() {
@@ -317,19 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Plotly is not loaded');
     }
 });
-
-// Функция для обновления графиков с фильтрами
-function updateChartsWithFilters() {
-    const startDate = document.getElementById('start_date').value;
-    const endDate = document.getElementById('end_date').value;
-    
-    // В реальной реализации здесь будет AJAX запрос
-    // Пока просто обновляем страницу с параметрами
-    const url = new URL(window.location);
-    url.searchParams.set('start_date', startDate);
-    url.searchParams.set('end_date', endDate);
-    window.location.href = url.toString();
-}
 </script>
 
 {% endblock %}

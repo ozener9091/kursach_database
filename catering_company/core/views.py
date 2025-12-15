@@ -27,7 +27,6 @@ from .forms import *
 from .permissions import *
 from .decorators import *
 from .sql import *
-from .analytics import *
 
 
 def help_page(request):
@@ -460,6 +459,309 @@ def change_password(request):
         'form': form
     })
 
+
+def generate_charts_data(user, start_date=None, end_date=None):
+    """Генерирует данные для графиков с возможностью фильтрации по дате"""
+    charts_data = []
+    
+    # Фильтрация по дате
+    date_filter = {}
+    if start_date:
+        date_filter['date__gte'] = start_date
+    if end_date:
+        date_filter['date__lte'] = end_date
+    
+    # 1. Топ-5 блюд по количеству продаж (столбчатая диаграмма)
+    if user.has_perm('core.view_dish') and user.has_perm('core.view_reportdish'):
+        try:
+            top_dishes_query = ReportDish.objects.select_related('report').values('dish__name')
+            
+            if start_date or end_date:
+                top_dishes_query = top_dishes_query.filter(report__date__range=[start_date, end_date])
+            
+            top_dishes = top_dishes_query.annotate(
+                total_quantity=Sum('quantity')
+            ).order_by('-total_quantity')[:5]
+            
+            if top_dishes:
+                dish_names = [item['dish__name'] for item in top_dishes if item['dish__name']]
+                quantities = [float(item['total_quantity'] or 0) for item in top_dishes]
+                
+                charts_data.append({
+                    'title': 'Топ-5 блюд по количеству продаж',
+                    'chart_id': 'top_dishes_chart',
+                    'chart_type': 'bar',
+                    'x_data': dish_names,
+                    'y_data': quantities,
+                    'x_label': 'Блюда',
+                    'y_label': 'Количество',
+                    'color': 'skyblue'
+                })
+        except Exception as e:
+            print(f"Error generating top dishes chart: {e}")
+    
+    # 2. Выручка по группам ассортимента (круговая диаграмма)
+    if user.has_perm('core.view_dish') and user.has_perm('core.view_reportdish'):
+        try:
+            sales_by_group_query = ReportDish.objects.select_related('dish', 'dish__assortment_group', 'report').values(
+                'dish__assortment_group__name'
+            )
+            
+            if start_date or end_date:
+                sales_by_group_query = sales_by_group_query.filter(report__date__range=[start_date, end_date])
+            
+            sales_by_group = sales_by_group_query.annotate(
+                total_revenue=Sum(F('quantity') * F('dish__price'))
+            ).order_by('-total_revenue')
+            
+            if sales_by_group:
+                group_names = [item['dish__assortment_group__name'] for item in sales_by_group if item['dish__assortment_group__name']]
+                revenues = [float(item['total_revenue'] or 0) for item in sales_by_group]
+                
+                charts_data.append({
+                    'title': 'Выручка по группам ассортимента',
+                    'chart_id': 'revenue_by_group_pie_chart',
+                    'chart_type': 'pie',
+                    'labels': group_names,
+                    'values': revenues,
+                    'color': 'lightgreen'
+                })
+        except Exception as e:
+            print(f"Error generating revenue by group pie chart: {e}")
+    
+    # 3. Остатки продуктов (столбчатая диаграмма)
+    if user.has_perm('core.view_product'):
+        try:
+            low_stock_products = Product.objects.filter(
+                remaining_stock__lt=20
+            ).order_by('remaining_stock')[:10]
+            
+            if low_stock_products:
+                product_names = [p.name for p in low_stock_products]
+                stock_levels = [float(p.remaining_stock) for p in low_stock_products]
+                
+                charts_data.append({
+                    'title': 'Продукты с низким остатком',
+                    'chart_id': 'low_stock_chart',
+                    'chart_type': 'bar',
+                    'x_data': product_names,
+                    'y_data': stock_levels,
+                    'x_label': 'Продукты',
+                    'y_label': 'Остаток',
+                    'color': 'orange'
+                })
+        except Exception as e:
+            print(f"Error generating low stock chart: {e}")
+    
+    # 4. Поставки по месяцам (линейный график)
+    if user.has_perm('core.view_delivery'):
+        try:
+            deliveries_query = Delivery.objects.all()
+            
+            if start_date:
+                deliveries_query = deliveries_query.filter(date__gte=start_date)
+            if end_date:
+                deliveries_query = deliveries_query.filter(date__lte=end_date)
+        
+            if not start_date and not end_date:
+                start_date_calc = datetime.now() - timedelta(days=365)
+                deliveries_query = deliveries_query.filter(date__gte=start_date_calc)
+            
+            monthly_deliveries = deliveries_query.annotate(
+                month=TruncMonth('date')
+            ).values('month').annotate(
+                delivery_count=Count('id')
+            ).order_by('month')
+            
+            if monthly_deliveries:
+                months = [item['month'].strftime('%Y-%m') for item in monthly_deliveries]
+                counts = [item['delivery_count'] for item in monthly_deliveries]
+                
+                charts_data.append({
+                    'title': 'Количество поставок по месяцам',
+                    'chart_id': 'monthly_deliveries_chart',
+                    'chart_type': 'line',
+                    'x_data': months,
+                    'y_data': counts,
+                    'x_label': 'Месяц',
+                    'y_label': 'Количество поставок',
+                    'color': 'purple'
+                })
+        except Exception as e:
+            print(f"Error generating deliveries chart: {e}")
+    
+    # 5. Средняя цена блюд по группам (столбчатая диаграмма)
+    if user.has_perm('core.view_dish'):
+        try:
+            avg_price_by_group = Dish.objects.values(
+                'assortment_group__name'
+            ).annotate(
+                avg_price=Avg('price')
+            ).order_by('-avg_price')
+            
+            if avg_price_by_group:
+                group_names = [item['assortment_group__name'] for item in avg_price_by_group if item['assortment_group__name']]
+                avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_group]
+                
+                charts_data.append({
+                    'title': 'Средняя цена блюд по группам',
+                    'chart_id': 'avg_price_chart',
+                    'chart_type': 'bar',
+                    'x_data': group_names,
+                    'y_data': avg_prices,
+                    'x_label': 'Группы ассортимента',
+                    'y_label': 'Средняя цена (₽)',
+                    'color': 'coral'
+                })
+        except Exception as e:
+            print(f"Error generating avg price chart: {e}")
+    
+    # 6. Распределение сотрудников по должности (круговая диаграмма)
+    if user.has_perm('core.view_employee'):
+        try:
+            employees_by_position = Employee.objects.values(
+                'position__name'
+            ).annotate(
+                employee_count=Count('id')
+            ).order_by('-employee_count')
+            
+            if employees_by_position:
+                position_names = [item['position__name'] for item in employees_by_position if item['position__name']]
+                counts = [item['employee_count'] for item in employees_by_position]
+                
+                charts_data.append({
+                    'title': 'Распределение сотрудников по должности',
+                    'chart_id': 'employees_by_position_pie_chart',
+                    'chart_type': 'pie',
+                    'labels': position_names,
+                    'values': counts,
+                    'color': 'lightblue'
+                })
+        except Exception as e:
+            print(f"Error generating employees by position chart: {e}")
+    
+    # 7. Количество заявок по дням (линейный график)
+    if user.has_perm('core.view_request'):
+        try:
+            requests_query = Request.objects.all()
+            
+            if start_date:
+                requests_query = requests_query.filter(date__date__gte=start_date)
+            if end_date:
+                requests_query = requests_query.filter(date__date__lte=end_date)
+            
+            if not start_date and not end_date:
+                start_date_calc = datetime.now() - timedelta(days=30)
+                requests_query = requests_query.filter(date__date__gte=start_date_calc)
+            
+            daily_requests = requests_query.annotate(
+                day=TruncDay('date')
+            ).values('day').annotate(
+                request_count=Count('id')
+            ).order_by('day')
+            
+            if daily_requests:
+                days = [item['day'].strftime('%Y-%m-%d') for item in daily_requests]
+                counts = [item['request_count'] for item in daily_requests]
+                
+                charts_data.append({
+                    'title': 'Количество заявок по дням',
+                    'chart_id': 'daily_requests_chart',
+                    'chart_type': 'line',
+                    'x_data': days,
+                    'y_data': counts,
+                    'x_label': 'Дата',
+                    'y_label': 'Количество заявок',
+                    'color': 'red'
+                })
+        except Exception as e:
+            print(f"Error generating daily requests chart: {e}")
+    
+    # 8. Средний возраст сотрудников по подразделениям (столбчатая диаграмма)
+    if user.has_perm('core.view_employee'):
+        try:
+            from datetime import date
+            from django.db.models import DateField, Case, When, IntegerField
+            from django.db.models.functions import ExtractYear
+            
+            # Вычисляем возраст сотрудников
+            employees_with_age = Employee.objects.annotate(
+                age=ExtractYear('birthday_date') - ExtractYear(date.today())
+            ).values(
+                'place_of_work__name'
+            ).annotate(
+                avg_age=Avg('age')
+            ).order_by('place_of_work__name')
+            
+            if employees_with_age:
+                place_names = [item['place_of_work__name'] for item in employees_with_age if item['place_of_work__name']]
+                avg_ages = [float(item['avg_age'] or 0) for item in employees_with_age]
+                
+                charts_data.append({
+                    'title': 'Средний возраст сотрудников по месту работы',
+                    'chart_id': 'avg_age_by_place_chart',
+                    'chart_type': 'bar',
+                    'x_data': place_names,
+                    'y_data': avg_ages,
+                    'x_label': 'Место работы',
+                    'y_label': 'Средний возраст',
+                    'color': 'yellow'
+                })
+        except Exception as e:
+            print(f"Error generating avg age chart: {e}")
+    
+    # 9. Объем поставок по поставщикам (круговая диаграмма)
+    if user.has_perm('core.view_delivery') and user.has_perm('core.view_deliveryproduct'):
+        try:
+            delivery_volume_by_provider = DeliveryProduct.objects.select_related('delivery', 'delivery__provider').values(
+                'delivery__provider__name'
+            ).annotate(
+                total_quantity=Sum('quantity')
+            ).order_by('-total_quantity')
+            
+            if delivery_volume_by_provider:
+                provider_names = [item['delivery__provider__name'] for item in delivery_volume_by_provider if item['delivery__provider__name']]
+                quantities = [float(item['total_quantity'] or 0) for item in delivery_volume_by_provider]
+                
+                charts_data.append({
+                    'title': 'Объем поставок по поставщикам',
+                    'chart_id': 'delivery_volume_pie_chart',
+                    'chart_type': 'pie',
+                    'labels': provider_names,
+                    'values': quantities,
+                    'color': 'pink'
+                })
+        except Exception as e:
+            print(f"Error generating delivery volume chart: {e}")
+    
+    # 10. Цена продуктов по категориям (столбчатая диаграмма)
+    if user.has_perm('core.view_product'):
+        try:
+            avg_price_by_category = Product.objects.values(
+                'provider__name'
+            ).annotate(
+                avg_price=Avg('purchase_price')
+            ).order_by('-avg_price')[:10]
+            
+            if avg_price_by_category:
+                provider_names = [item['provider__name'] for item in avg_price_by_category if item['provider__name']]
+                avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_category]
+                
+                charts_data.append({
+                    'title': 'Средняя цена продуктов по поставщикам',
+                    'chart_id': 'avg_price_by_provider_chart',
+                    'chart_type': 'bar',
+                    'x_data': provider_names,
+                    'y_data': avg_prices,
+                    'x_label': 'Поставщики',
+                    'y_label': 'Средняя цена (₽)',
+                    'color': 'brown'
+                })
+        except Exception as e:
+            print(f"Error generating avg price by provider chart: {e}")
+    
+    return charts_data
+
 @login_required
 def analytics_dashboard(request):
     """Дашборд аналитики"""
@@ -481,13 +783,10 @@ def analytics_dashboard(request):
     if not end_date:
         end_date = datetime.now().date()
     
-    available_data = get_available_analytics_data(user)
-    
     charts_data = generate_charts_data(user, start_date, end_date)
     
     context = {
         'charts_data': charts_data,
-        'available_data': available_data,
         'date_range': {
             'start': start_date.strftime('%Y-%m-%d'),
             'end': end_date.strftime('%Y-%m-%d')
@@ -496,173 +795,6 @@ def analytics_dashboard(request):
     
     return render(request, 'core/analytics.html', context)
 
-@csrf_exempt
-def update_charts_data(request):
-    """Обновление данных графиков через AJAX"""
-    if request.method == 'POST':
-        try:
-            start_date_str = request.POST.get('start_date')
-            end_date_str = request.POST.get('end_date')
-            
-            start_date = None
-            end_date = None
-            
-            if start_date_str:
-                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            if end_date_str:
-                end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-                
-            user = request.user
-            charts_data = generate_charts_data(user, start_date, end_date)
-            
-            return JsonResponse({'charts_data': charts_data}, encoder=DjangoJSONEncoder)
-                
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
-def export_chart(request, chart_id):
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-
-    if chart_id == 'top_dishes_chart':
-        try:
-            top_dishes = ReportDish.objects.values('dish__name').annotate(
-                total_quantity=Sum('quantity')
-            ).order_by('-total_quantity')[:5]
-            
-            if top_dishes:
-                dish_names = [item['dish__name'] for item in top_dishes if item['dish__name']]
-                quantities = [float(item['total_quantity'] or 0) for item in top_dishes]
-                
-                ax.bar(dish_names, quantities, color='skyblue')
-                ax.set_title('Топ-5 блюд по количеству продаж')
-                ax.set_xlabel('Блюда')
-                ax.set_ylabel('Количество')
-                plt.xticks(rotation=45, ha='right')
-            else:
-                ax.text(0.5, 0.5, 'Нет данных', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-                ax.set_title('Нет данных для отображения')
-        except Exception as e:
-            ax.text(0.5, 0.5, 'Ошибка: ' + str(e), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-            ax.set_title('Ошибка загрузки данных')
-    
-    elif chart_id == 'revenue_by_group_chart':
-        try:
-            sales_by_group = ReportDish.objects.select_related('dish', 'dish__assortment_group').values(
-                'dish__assortment_group__name'
-            ).annotate(
-                total_revenue=Sum(F('quantity') * F('dish__price'))
-            ).order_by('-total_revenue')
-            
-            if sales_by_group:
-                group_names = [item['dish__assortment_group__name'] for item in sales_by_group if item['dish__assortment_group__name']]
-                revenues = [float(item['total_revenue'] or 0) for item in sales_by_group]
-                
-                ax.bar(group_names, revenues, color='lightgreen')
-                ax.set_title('Выручка по группам ассортимента')
-                ax.set_xlabel('Группы ассортимента')
-                ax.set_ylabel('Выручка (₽)')
-                plt.xticks(rotation=45, ha='right')
-            else:
-                ax.text(0.5, 0.5, 'Нет данных', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-                ax.set_title('Нет данных для отображения')
-        except Exception as e:
-            ax.text(0.5, 0.5, 'Ошибка: ' + str(e), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-            ax.set_title('Ошибка загрузки данных')
-    
-    elif chart_id == 'low_stock_chart':
-        try:
-            low_stock_products = Product.objects.filter(
-                remaining_stock__lt=20
-            ).order_by('remaining_stock')[:10]
-            
-            if low_stock_products:
-                product_names = [p.name for p in low_stock_products]
-                stock_levels = [float(p.remaining_stock) for p in low_stock_products]
-                
-                ax.bar(product_names, stock_levels, color='orange')
-                ax.set_title('Продукты с низким остатком')
-                ax.set_xlabel('Продукты')
-                ax.set_ylabel('Остаток')
-                plt.xticks(rotation=45, ha='right')
-            else:
-                ax.text(0.5, 0.5, 'Нет данных', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-                ax.set_title('Нет данных для отображения')
-        except Exception as e:
-            ax.text(0.5, 0.5, 'Ошибка: ' + str(e), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-            ax.set_title('Ошибка загрузки данных')
-    
-    elif chart_id == 'monthly_deliveries_chart':
-        try:
-            
-            start_date = datetime.now() - timedelta(days=365)
-             
-            monthly_deliveries = Delivery.objects.filter(
-                date__gte=start_date
-            ).annotate(
-                month=TruncMonth('date')
-            ).values('month').annotate(
-                delivery_count=Count('id')
-            ).order_by('month')
-            
-            if monthly_deliveries:
-                months = [item['month'].strftime('%Y-%m') for item in monthly_deliveries]
-                counts = [item['delivery_count'] for item in monthly_deliveries]
-                
-                ax.plot(months, counts, marker='o', linewidth=2, color='purple')
-                ax.set_title('Количество поставок по месяцам')
-                ax.set_xlabel('Месяц')
-                ax.set_ylabel('Количество поставок')
-                plt.xticks(rotation=45, ha='right')
-            else:
-                ax.text(0.5, 0.5, 'Нет данных', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-                ax.set_title('Нет данных для отображения')
-        except Exception as e:
-            ax.text(0.5, 0.5, 'Ошибка: ' + str(e), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-            ax.set_title('Ошибка загрузки данных')
-    
-    elif chart_id == 'avg_price_chart':
-        try:
-            avg_price_by_group = Dish.objects.values(
-                'assortment_group__name'
-            ).annotate(
-                avg_price=Avg('price')
-            ).order_by('-avg_price')
-            
-            if avg_price_by_group:
-                group_names = [item['assortment_group__name'] for item in avg_price_by_group if item['assortment_group__name']]
-                avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_group]
-                
-                ax.bar(group_names, avg_prices, color='coral')
-                ax.set_title('Средняя цена блюд по группам ассортимента')
-                ax.set_xlabel('Группы ассортимента')
-                ax.set_ylabel('Средняя цена (₽)')
-                plt.xticks(rotation=45, ha='right')
-            else:
-                ax.text(0.5, 0.5, 'Нет данных', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-                ax.set_title('Нет данных для отображения')
-        except Exception as e:
-            ax.text(0.5, 0.5, 'Ошибка: ' + str(e), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-            ax.set_title('Ошибка загрузки данных')
-    
-    else:
-        ax.text(0.5, 0.5, f'График: {chart_id}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
-        ax.set_title(f'График: {chart_id}')
-    
-    plt.tight_layout()
-    
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
-    buffer.seek(0)
-    
-    response = HttpResponse(buffer.getvalue(), content_type='image/png')
-    response['Content-Disposition'] = f'attachment; filename={chart_id}.png'
-    
-    plt.close()
-    return response
 
 class UniversalTableView(LoginRequiredMixin, ListView):
     template_name = 'core/universal_table.html'

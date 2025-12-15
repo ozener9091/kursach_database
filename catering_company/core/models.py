@@ -118,7 +118,8 @@ class Dish(models.Model):
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0)],
-        verbose_name='Цена'
+        verbose_name='Цена',
+        default=0.0
     )
 
     output = models.DecimalField(
@@ -126,12 +127,14 @@ class Dish(models.Model):
         max_digits=10,
         decimal_places=3,
         validators=[MinValueValidator(0)],
-        verbose_name='Выход'
+        verbose_name='Выход',
+        default=0.0
     )
 
     description = models.TextField(
         null=False,
-        verbose_name='Краткое описание приготовления'
+        verbose_name='Краткое описание приготовления',
+        default=''
     )
 
     image = models.ImageField(
@@ -270,7 +273,8 @@ class Provider(models.Model):
 
     abbreviation = models.CharField(
         max_length=20,
-        choices=AbbreviationType.choices
+        choices=AbbreviationType.choices,
+        default='ООО'
     )
 
     account_number = models.CharField(

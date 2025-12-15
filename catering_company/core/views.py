@@ -459,7 +459,6 @@ def change_password(request):
         'form': form
     })
 
-
 def generate_charts_data(user, start_date=None, end_date=None):
     """Генерирует данные для графиков с возможностью фильтрации по дате"""
     charts_data = []
@@ -794,7 +793,6 @@ def analytics_dashboard(request):
     }
     
     return render(request, 'core/analytics.html', context)
-
 
 class UniversalTableView(LoginRequiredMixin, ListView):
     template_name = 'core/universal_table.html'

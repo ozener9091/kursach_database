@@ -613,7 +613,7 @@ class Employee(models.Model):
     )
 
     gender = models.CharField(
-        max_length=20,
+        max_length=40,
         choices=GenderType.choices
     )
 
@@ -766,7 +766,7 @@ class WorkBook(models.Model):
     )
 
     event_type = models.CharField(
-        max_length=20,
+        max_length=40,
         choices=EventType.choices
     )
 

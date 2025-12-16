@@ -4,14 +4,6 @@
 
 {% block content %}
 <div class="container">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">📊 Панель управления</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'table_'|add:model_name %}">{{ verbose_name|capfirst }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Подтверждение удаления</li>
-        </ol>
-    </nav>
-
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">

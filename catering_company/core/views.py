@@ -1,6 +1,4 @@
 
-import io
-
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
@@ -8,11 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.mail import send_mail
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection, models
 from django.db.models import Count, Sum, Avg, F
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.db.models.functions import TruncMonth
 from django.apps import apps
@@ -20,7 +16,6 @@ from django.apps import apps
 from datetime import datetime, timedelta
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 from .models import *
 from .forms import *
@@ -463,14 +458,12 @@ def generate_charts_data(user, start_date=None, end_date=None):
     """Генерирует данные для графиков с возможностью фильтрации по дате"""
     charts_data = []
     
-    # Фильтрация по дате
     date_filter = {}
     if start_date:
         date_filter['date__gte'] = start_date
     if end_date:
         date_filter['date__lte'] = end_date
     
-    # 1. Топ-5 блюд по количеству продаж (столбчатая диаграмма)
     if user.has_perm('core.view_dish') and user.has_perm('core.view_reportdish'):
         try:
             top_dishes_query = ReportDish.objects.select_related('report').values('dish__name')
@@ -499,7 +492,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating top dishes chart: {e}")
     
-    # 2. Выручка по группам ассортимента (круговая диаграмма)
     if user.has_perm('core.view_dish') and user.has_perm('core.view_reportdish'):
         try:
             sales_by_group_query = ReportDish.objects.select_related('dish', 'dish__assortment_group', 'report').values(
@@ -528,7 +520,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating revenue by group pie chart: {e}")
     
-    # 3. Остатки продуктов (столбчатая диаграмма)
     if user.has_perm('core.view_product'):
         try:
             low_stock_products = Product.objects.filter(
@@ -552,7 +543,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating low stock chart: {e}")
     
-    # 4. Поставки по месяцам (линейный график)
     if user.has_perm('core.view_delivery'):
         try:
             deliveries_query = Delivery.objects.all()
@@ -589,7 +579,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating deliveries chart: {e}")
     
-    # 5. Средняя цена блюд по группам (столбчатая диаграмма)
     if user.has_perm('core.view_dish'):
         try:
             avg_price_by_group = Dish.objects.values(
@@ -615,7 +604,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating avg price chart: {e}")
     
-    # 6. Распределение сотрудников по должности (круговая диаграмма)
     if user.has_perm('core.view_employee'):
         try:
             employees_by_position = Employee.objects.values(
@@ -639,7 +627,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating employees by position chart: {e}")
     
-    # 7. Количество заявок по дням (линейный график)
     if user.has_perm('core.view_request'):
         try:
             requests_query = Request.objects.all()
@@ -676,14 +663,12 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating daily requests chart: {e}")
     
-    # 8. Средний возраст сотрудников по подразделениям (столбчатая диаграмма)
     if user.has_perm('core.view_employee'):
         try:
             from datetime import date
             from django.db.models import DateField, Case, When, IntegerField
             from django.db.models.functions import ExtractYear
             
-            # Вычисляем возраст сотрудников
             employees_with_age = Employee.objects.annotate(
                 age=ExtractYear('birthday_date') - ExtractYear(date.today())
             ).values(
@@ -709,7 +694,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating avg age chart: {e}")
     
-    # 9. Объем поставок по поставщикам (круговая диаграмма)
     if user.has_perm('core.view_delivery') and user.has_perm('core.view_deliveryproduct'):
         try:
             delivery_volume_by_provider = DeliveryProduct.objects.select_related('delivery', 'delivery__provider').values(
@@ -733,7 +717,6 @@ def generate_charts_data(user, start_date=None, end_date=None):
         except Exception as e:
             print(f"Error generating delivery volume chart: {e}")
     
-    # 10. Цена продуктов по категориям (столбчатая диаграмма)
     if user.has_perm('core.view_product'):
         try:
             avg_price_by_category = Product.objects.values(
@@ -955,7 +938,6 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
     form_class = None
     
     def get_form_class(self):
-        # Для модели Dish используем специальный Form
         if self.model == Dish:
             from .forms import DishForm
             return DishForm
@@ -974,7 +956,6 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
         elif self.model == Employee:
             from .forms import EmployeeForm
             return EmployeeForm
-        # Для всех остальных моделей используем универсальный Form
         else:
             from .forms import UniversalForm
             class DynamicForm(UniversalForm):
@@ -984,7 +965,6 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
             return DynamicForm
     
     def get_success_url(self):
-        # Проверяем, была ли нажата кнопка "сохранить и добавить еще"
         if 'action' in self.request.POST and self.request.POST['action'] == 'save_and_add':
             return self.request.path  # Остаемся на той же странице
         else:
@@ -997,10 +977,9 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
         context['verbose_name'] = self.model._meta.verbose_name
         context['is_create'] = True
         
-        # Для модели Dish добавляем специальные данные
         if self.model == Dish:
             all_ingredients = Ingredient.objects.all()
-            selected_ingredients = []  # Нет выбранных ингредиентов при создании
+            selected_ingredients = []
             available_ingredients = all_ingredients
             context['selected_ingredients'] = selected_ingredients
             context['available_ingredients'] = available_ingredients
@@ -1008,17 +987,12 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
         return context
     
     def form_valid(self, form):
-        # Сохраняем объект
         response = super().form_valid(form)
         
-        # Обрабатываем ManyToMany связи
         if self.model == Dish:
-            # Получаем выбранные ингредиенты из формы
             selected_ingredients = form.cleaned_data.get('ingredients', [])
-            # Присваиваем их ManyToMany полю
             self.object.ingredients.set(selected_ingredients)
         
-        # Проверяем, была ли нажата кнопка "сохранить и добавить еще"
         if 'action' in self.request.POST and self.request.POST['action'] == 'save_and_add':
             return redirect(self.request.path)
         
@@ -1058,7 +1032,6 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
         elif self.model == Employee:
             from .forms import EmployeeForm
             return EmployeeForm
-        # Для всех остальных моделей используем универсальный Form
         else:
             from .forms import UniversalForm
             class DynamicForm(UniversalForm):
@@ -1077,7 +1050,6 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
         context['verbose_name'] = self.model._meta.verbose_name
         context['is_create'] = False
         
-        # Для модели Dish добавляем специальные данные
         if self.model == Dish:
             all_ingredients = Ingredient.objects.all()
             selected_ingredients = self.object.ingredients.all()
@@ -1090,20 +1062,15 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
         return context
     
     def form_valid(self, form):
-        # Сохраняем объект
         response = super().form_valid(form)
         
-        # Обрабатываем ManyToMany связи
         if self.model == Dish:
-            # Получаем выбранные ингредиенты из формы
             selected_ingredients = form.cleaned_data.get('ingredients', [])
-            # Присваиваем их ManyToMany полю
             self.object.ingredients.set(selected_ingredients)
         
         return response
     
     def dispatch(self, request, *args, **kwargs):
-        # Проверяем права на изменение
         if not request.user.has_perm(f'core.change_{self.model._meta.model_name}'):
             messages.error(request, 'У вас нет прав для изменения записей в этой таблице')
             return redirect('dashboard')

@@ -47,6 +47,15 @@
                         </button>
                     </div>
                 </form>
+
+                <form method="post" action="{% url 'password_reset' %}">
+                    {% csrf_token %}
+                    <div class="d-grid gap-5">
+                        <button type="submit" class="btn btn-lg">
+                            Забыли пароль?
+                        </button>
+                    </div>
+                </form>
                 
                 <hr class="my-4">
                 

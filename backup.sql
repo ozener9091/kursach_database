@@ -2,15 +2,14 @@
 -- PostgreSQL database dump
 --
 
-\restrict 3TKI4YwBcFXMQk8cUT4DKciZ3tmZfE2UQH7VkhlqAtzjOioEvSb5Shmo6uAKKe9
+\restrict 8doD4pOzcDJxvUu4xo3zLKckneh29IbWCcyBxTw1ynQcKo7qDN7DuT7oxWgcr85
 
--- Dumped from database version 18.1
--- Dumped by pg_dump version 18.1
+-- Dumped from database version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -539,7 +538,7 @@ CREATE TABLE public.core_employee (
     birthday_date date NOT NULL,
     house_number character varying(6) NOT NULL,
     work_experience character varying(20) NOT NULL,
-    gender character varying(20) NOT NULL,
+    gender character varying(40) NOT NULL,
     city_id bigint NOT NULL,
     country_id bigint NOT NULL,
     position_id bigint NOT NULL,
@@ -936,7 +935,7 @@ CREATE TABLE public.core_workbook (
     id bigint NOT NULL,
     event_date date,
     reason_for_dismissal text,
-    event_type character varying(20) NOT NULL,
+    event_type character varying(40) NOT NULL,
     number character varying(20) NOT NULL,
     document_type character varying(30) NOT NULL,
     classification_id bigint NOT NULL,
@@ -1409,11 +1408,11 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 --
 
 COPY public.auth_user (id, password, last_login, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined) FROM stdin;
-3	pbkdf2_sha256$600000$GANomQvDQha2Izg6W9UgSV$VXQGhPK/QISTWc3neYxSb+XTsRLfhLYqDRsmnkTTRDg=	2025-12-11 21:14:34.858301+07	f	manager			manager@example.com	f	t	2025-12-11 20:40:22.739644+07
-5	pbkdf2_sha256$600000$A1Z2OUxUZNy3WLPdHfgyu6$QYw3f1Wb8T16touHZqIx6cBXVrhZ79DAVTfHFKYXWa0=	2025-12-13 18:47:33.80556+07	f	hr_manager			hr@example.com	f	t	2025-12-11 20:40:23.508336+07
-4	pbkdf2_sha256$600000$NT0UGk43oquA9B4HggovRJ$Sn0zxKZTtm4+s+L3ZZupJFucyVOlgr0PYTteiy5wPn8=	2025-12-15 20:06:58.682869+07	f	chef			chef@example.com	f	t	2025-12-11 20:40:23.12549+07
-2	pbkdf2_sha256$600000$iyfdxLdSMyzhiAlXj3jwsB$rlNEHnyV/OKbOICYCw4GZcsJzrgtXysWve+JNa1dr8E=	2025-12-15 20:48:37.633284+07	f	director			director@example.com	f	t	2025-12-11 20:38:49.497072+07
 1	pbkdf2_sha256$600000$Qm0p085rDQMwVRH0N5NwXL$EkEvj8XwCBf84f/lx+4Xmb+zkN9+d2UvlwKm/ZP54pM=	2025-12-15 20:53:11.95612+07	t	admin			ruberlep34@bk.ru	t	t	2025-12-11 19:08:47.793935+07
+2	pbkdf2_sha256$600000$ypUukEcTfXyn577EUddkep$nIDC7Gfmi96V9VYml2osVdTwY5vZEKWDwzQhnaif6Eo=	2025-12-17 21:42:42.335044+07	f	director			director@example.com	f	t	2025-12-11 20:38:49.497072+07
+4	pbkdf2_sha256$600000$NT0UGk43oquA9B4HggovRJ$Sn0zxKZTtm4+s+L3ZZupJFucyVOlgr0PYTteiy5wPn8=	2025-12-17 21:44:39.01777+07	f	chef			chef@example.com	f	t	2025-12-11 20:40:23.12549+07
+5	pbkdf2_sha256$600000$A1Z2OUxUZNy3WLPdHfgyu6$QYw3f1Wb8T16touHZqIx6cBXVrhZ79DAVTfHFKYXWa0=	2025-12-17 21:45:01.88012+07	f	hr_manager			hr@example.com	f	t	2025-12-11 20:40:23.508336+07
+3	pbkdf2_sha256$600000$GANomQvDQha2Izg6W9UgSV$VXQGhPK/QISTWc3neYxSb+XTsRLfhLYqDRsmnkTTRDg=	2025-12-17 21:45:06.458192+07	f	manager			manager@example.com	f	t	2025-12-11 20:40:22.739644+07
 \.
 
 
@@ -1488,6 +1487,49 @@ COPY public.core_actionlog (id, action, object_type, object_id, object_name, ip_
 44	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-15 20:48:37.624603+07	Пользователь director вошел в систему	2
 45	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-15 20:53:08.743314+07	Пользователь director вышел из системы	2
 46	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-15 20:53:11.954594+07	Пользователь admin вошел в систему	1
+47	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 20:41:01.003306+07	Пользователь director вошел в систему	2
+48	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 21:56:26.197123+07	Пользователь director вышел из системы	2
+49	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:16:54.480692+07	Пользователь director вошел в систему	2
+50	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:25:07.708754+07	Пользователь director вышел из системы	2
+51	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:25:10.499288+07	Пользователь chef вошел в систему	4
+52	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:25:17.427923+07	Пользователь chef вышел из системы	4
+53	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:25:20.568015+07	Пользователь director вошел в систему	2
+54	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:28:30.847636+07	Пользователь director вышел из системы	2
+55	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:28:36.642734+07	Пользователь director вошел в систему	2
+56	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:59:54.799523+07	Пользователь director вышел из системы	2
+57	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 22:59:57.388516+07	Пользователь chef вошел в систему	4
+58	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 23:29:20.546821+07	Пользователь chef вышел из системы	4
+59	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-16 23:29:24.029838+07	Пользователь director вошел в систему	2
+60	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 00:22:01.707904+07	Пользователь director вышел из системы	2
+61	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 00:22:16.813189+07	Пользователь chef вошел в систему	4
+62	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 13:46:24.59755+07	Пользователь chef вышел из системы	4
+63	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 13:46:28.012895+07	Пользователь director вошел в систему	2
+64	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 15:43:44.853488+07	Пользователь director вышел из системы	2
+65	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 15:43:48.641378+07	Пользователь director вошел в систему	2
+66	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 15:43:56.162311+07	Пользователь director вышел из системы	2
+67	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 15:44:00.428301+07	Пользователь director вошел в систему	2
+68	update	Блюда	8	Суп-лапша	\N	\N	2025-12-17 16:03:39.033649+07	Изменение записи	2
+69	update	Блюда	5	Цезарь	\N	\N	2025-12-17 16:03:54.140934+07	Изменение записи	2
+70	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:16:33.954593+07	Пользователь director вышел из системы	2
+71	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:16:36.916819+07	Пользователь director вошел в систему	2
+72	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:19:51.624292+07	Пользователь director вышел из системы	2
+73	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:19:54.029429+07	Пользователь director вошел в систему	2
+74	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:22:45.525569+07	Пользователь director вышел из системы	2
+75	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:22:47.230804+07	Пользователь director вошел в систему	2
+76	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:23:00.035391+07	Пользователь director вышел из системы	2
+77	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:23:03.993492+07	Пользователь director вошел в систему	2
+78	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:27:52.742914+07	Пользователь director вышел из системы	2
+79	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:27:55.378108+07	Пользователь director вошел в систему	2
+80	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:27:59.282934+07	Пользователь director вышел из системы	2
+81	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 16:28:12.412524+07	Пользователь director вошел в систему	2
+82	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:42:27.082929+07	Пользователь director вышел из системы	2
+83	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:42:42.331026+07	Пользователь director вошел в систему	2
+84	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:44:34.763882+07	Пользователь director вышел из системы	2
+85	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:44:39.013771+07	Пользователь chef вошел в систему	4
+86	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:44:52.272866+07	Пользователь chef вышел из системы	4
+87	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:45:01.874754+07	Пользователь hr_manager вошел в систему	5
+88	logout	authentication	\N	Выход из системы	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:45:03.312201+07	Пользователь hr_manager вышел из системы	5
+89	login	authentication	\N	Вход в систему	127.0.0.1	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 YaBrowser/25.10.0.0 Safari/537.36	2025-12-17 21:45:06.455242+07	Пользователь manager вошел в систему	3
 \.
 
 
@@ -1805,10 +1847,8 @@ COPY public.core_dish (id, name, price, output, description, image, assortment_g
 2	Оливье	180.00	0.200	Салат Оливье	\N	2	9
 3	Бефстроганов	350.00	0.300	Говядина по-строгановски	\N	3	9
 4	Плов	280.00	0.400	Узбекский плов	\N	3	9
-5	Цезарь	220.00	0.250	Салат Цезарь	\N	2	9
 6	Гречка с грибами	150.00	0.300	Гречка с шампиньонами	\N	4	9
 7	Тирамису	200.00	0.150	Итальянский десерт	\N	5	9
-8	Суп-лапша	170.00	0.350	Куриный суп с лапшой	\N	1	9
 10	Морс клюквенный	100.00	0.250	Напиток из клюквы	\N	6	3
 9	Шашлык	400.00	0.350	Свиной шашлык	dishes/shaslik.jpg	3	9
 12	Салат из свежих овощей	160.00	0.200	Свежие овощи с заправкой	\N	2	9
@@ -1831,6 +1871,8 @@ COPY public.core_dish (id, name, price, output, description, image, assortment_g
 30	Суп с кукурузой	220.00	0.300	Крем-суп из кукурузы	\N	19	9
 19	Шашлык из баранины	450.00	0.400	Бараний шашлык	dishes/high-angle-view-food-table_1048944-15560867.jpg	3	2
 11	Щи	235.00	0.350	Щи из квашеной капусты	dishes/Без_названия_3.jpeg	1	9
+8	Суп-лапша	170.00	0.350	Куриный суп с лапшой		1	9
+5	Цезарь	220.00	0.250	Салат Цезарь		2	9
 \.
 
 
@@ -1909,6 +1951,9 @@ COPY public.core_dish_ingredients (id, dish_id, ingredient_id) FROM stdin;
 68	11	22
 69	11	27
 70	11	23
+71	5	25
+72	5	3
+73	5	22
 \.
 
 
@@ -2611,6 +2656,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 20	core	0002_alter_delivery_date_alter_employee_birthday_date_and_more	2025-12-14 15:15:40.830911+07
 21	core	0003_actionlog	2025-12-14 19:17:53.391851+07
 22	core	0004_alter_dish_description_alter_dish_output_and_more	2025-12-15 19:26:28.350178+07
+23	core	0005_alter_employee_gender_alter_workbook_event_type	2025-12-16 20:40:48.181791+07
 \.
 
 
@@ -2623,6 +2669,7 @@ ild2b3o5aa93xd6rljq0uoxkhgesm6xh	.eJxVjMsOwiAQRf-FtSHIa8Cl-34DgRmQqoGktCvjv2uTLn
 17ddepizth9yynck5r4absu2a66gu4wy	.eJxVjMsOwiAQRf-FtSHIa8Cl-34DgRmQqoGktCvjv2uTLnR7zzn3xULc1hq2kZcwE7swyU6_W4r4yG0HdI_t1jn2ti5z4rvCDzr41Ck_r4f7d1DjqN8ajS5FKkPZgEroEwpwkZQuCt3ZkdUWrAPKXqDXyUtEg4AggJRzRrH3B-7zN8c:1vUOYR:uIk-K3dO_l2x-Ryl31c9FnbOe_y2CEJ5rp0wf3Ycsuc	2025-12-27 19:16:55.648422+07
 e74elohg3pg2vizwix1db861kqekp0t2	.eJxVjEsKwjAUAO-StYQ0f1269wzlfRJTlQSadiXeXQJd6HZmmLeYYd_KvPe0zguLi9Di9MsQ6JnqEPyAem-SWt3WBeVI5GG7vDVOr-vR_g0K9DK2-hxVttYEZ4w3rJAjWXAYgHwKE4dso8-KCAHBog9aOwXg0gTEGsXnC9ToOEg:1vUmn7:P5xeHWrFL22L6ygyz6_HY4FKKnS5RHaMFN7yIoT5i68	2025-12-28 21:09:41.158847+07
 2al807fjcib3m8gfgvodj8eqhelriy0t	.eJxVjksOwyAMRO_CukLkB6bL7nsGZIxJ0kaJBGHTqncvkbJot29mnv0WDss-uZI5uTmIq2jE5Zd5pCevRxAeuI6bpG3d0-zlUZFnmuV9C7zczu6fYMI81XXbgPZsrEcNtucQrWI_hOgHpdugkMBajKT6HkgbGqjBYBRo1h0Z6KBKY73s8vziqlswjVzZUn8qOB4oFfH5ArQ3RAA:1vV9Ln:nNQ7HXTAcBk_AID240Loz85RZBzqY3tpV43Ey0AGgKA	2025-12-29 21:14:59.565548+07
+h95coxb756ax4cbeak8lr1s26zlcxwz2	.eJxVjjsOwjAQRO_iGlkOthebkj5niNbeXRwCjpRPhbg7iZQC2nkzT_NWHa5L6daZp64ndVVWnX6zhHngugN6YL2POo91mfqk94o-6Kzbkfh5O7p_goJz2daQBCV63zCERhxlE0kQvPNkI2YrPiUyJkSIhs_BuAAQ6CIZsvgosEmXwi_ej-A0qM8XY608zg:1vVsm2:2U8I8jxjSg8ZvDZzRoTZVtcIVTfXyWwG-7xcMIzUTzk	2025-12-31 21:45:06.710734+07
 \.
 
 
@@ -2672,7 +2719,7 @@ SELECT pg_catalog.setval('public.auth_user_user_permissions_id_seq', 1, false);
 -- Name: core_actionlog_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.core_actionlog_id_seq', 46, true);
+SELECT pg_catalog.setval('public.core_actionlog_id_seq', 89, true);
 
 
 --
@@ -2742,7 +2789,7 @@ SELECT pg_catalog.setval('public.core_dish_id_seq', 30, true);
 -- Name: core_dish_ingredients_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.core_dish_ingredients_id_seq', 70, true);
+SELECT pg_catalog.setval('public.core_dish_ingredients_id_seq', 73, true);
 
 
 --
@@ -2875,7 +2922,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 32, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 22, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 23, true);
 
 
 --
@@ -3885,5 +3932,5 @@ ALTER TABLE ONLY public.django_admin_log
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 3TKI4YwBcFXMQk8cUT4DKciZ3tmZfE2UQH7VkhlqAtzjOioEvSb5Shmo6uAKKe9
+\unrestrict 8doD4pOzcDJxvUu4xo3zLKckneh29IbWCcyBxTw1ynQcKo7qDN7DuT7oxWgcr85
 

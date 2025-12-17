@@ -4,8 +4,6 @@ from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(4(s3#l-8f_%5o^803hgf$ilvmcykeqnd44^qgs8!5ts5g5j%x'
-YANDEX_TRANSLATE_API_KEY = 'AQVN3KP93xyLIADbRIRpaGZK4DmV9cL8gVvVs2rg'
-YANDEX_FOLDER_ID = 'b1g3ju1ri1umfkbu9dg7'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 

@@ -2,26 +2,17 @@ from django.http import HttpResponse
 from django.db import connection
 from django.apps import apps
 from django.contrib.auth import get_user_model
-
 import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
-
 import re
+from core.models import *
 
-from core.models import (
-    Dish, Ingredient, Request, RequestProduct, Delivery, DeliveryProduct,
-    Product, Provider, Report, ReportDish, Bank, Division, Country,
-    City, Street, UnitOfMeasurement, AssortmentGroup, Employee,
-    Position, PlaceOfWork, Department, Profession, Specialization,
-    Classification, WorkBook
-)
 
 User = get_user_model()
 
 def export_sql_results_to_excel(sql_query, user):
     """Экспортирует результаты SQL запроса в Excel файл"""
-    # Проверяем, что запрос является SELECT
     if not is_valid_select_query(sql_query):
         return HttpResponse('Разрешены только SELECT запросы!', status=400)
     
@@ -43,26 +34,11 @@ def export_sql_results_to_excel(sql_query, user):
             for col_num, column_title in enumerate(columns, 1):
                 cell = worksheet.cell(row=1, column=col_num, value=column_title)
                 cell.font = Font(bold=True)
-                cell.fill = PatternFill(start_color='CCCCCC', end_color='CCCCCC', fill_type='solid')
                 cell.alignment = Alignment(horizontal='center')
             
             for row_num, row_data in enumerate(results, 2):
                 for col_num, cell_value in enumerate(row_data, 1):
                     worksheet.cell(row=row_num, column=col_num, value=str(cell_value))
-            
-            for column in worksheet.columns:
-                max_length = 0
-                column_letter = get_column_letter(column[0].column)
-                
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                
-                adjusted_width = min(max_length + 2, 50)
-                worksheet.column_dimensions[column_letter].width = adjusted_width
             
             response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             response['Content-Disposition'] = f'attachment; filename=sql_results_{user.username}_{user.id}.xlsx'
@@ -78,47 +54,38 @@ def get_available_models_for_user(user):
     models_list = []
     
     if user.groups.filter(name='Директор').exists() or user.is_superuser:
-        # Для директора - все таблицы приложения core, исключая системные Django таблицы
-        from django.apps import apps
-        
-        # Получаем все модели из приложения core
-        core_app = apps.get_app_config('core')
-        core_models = core_app.get_models()
+        core_models = apps.get_app_config('core').get_models()
         
         for model in core_models:
             model_name = model._meta.model_name
             
-            # Исключаем системные таблицы Django и справочные таблицы
+            # Исключаем системные таблицы Django
             excluded_names = [
-                'abbreviationtype', 'gendertype', 'eventtype',  # Старые справочные таблицы
+                'abbreviationtype', 'gendertype', 'eventtype', 
                 'permission', 'group', 'user', 'contenttype', 'session', 'adminlogentry',
                 'migration', 'logentry', 'tokenproxy', 'permissionproxy', 'groupproxy',
                 'userproxy', 'contenttypeproxy', 'sessionproxy', 'adminlogentryproxy',
                 'migrationproxy', 'logentryproxy'
             ]
             
-            # Также исключаем таблицы, начинающиеся с auth_, sessions_, admin_, contenttypes_
+            # Исключаем таблицы, начинающиеся с auth_, sessions_, admin_, contenttypes_
             if (model_name not in excluded_names and 
                 not model_name.startswith(('auth_', 'session_', 'admin_', 'contenttype_')) and
                 not model_name.startswith(('logentry_', 'permission_', 'group_', 'user_'))):
                 
-                # Проверяем права на просмотр (если пользователь не суперпользователь)
+                # Проверяем права на просмотр
                 if user.is_superuser or user.has_perm(f'core.view_{model_name}'):
                     models_list.append({
                         'name': model_name,
                         'verbose_name': model._meta.verbose_name_plural
                     })
-        many_to_many_intermediate_tables = [
-            {'name': 'dish_ingredients', 'verbose_name': 'Связь блюдо-ингредиент'},
-        ]
-        
-        for table in many_to_many_intermediate_tables:
-            models_list.append({
-                'name': table['name'],
-                'verbose_name': table['verbose_name']
+        models_list.append({
+                'name': 'dish_ingredients',
+                'verbose_name': 'Связь блюдо-ингредиент'
             })
+    
+            
     elif user.groups.filter(name='Менеджер').exists():
-        # Остальная логика для менеджера остается без изменений
         manager_models = [
             ('dish', 'Блюда', Dish),
             ('ingredient', 'Ингредиенты', Ingredient),
@@ -146,7 +113,6 @@ def get_available_models_for_user(user):
                     'verbose_name': verbose_name
                 })
     elif user.groups.filter(name='Шеф-повар').exists():
-        # Остальная логика для шеф-повара остается без изменений
         chef_models = [
             ('dish', 'Блюда', Dish),
             ('product', 'Продукты', Product),
@@ -165,7 +131,6 @@ def get_available_models_for_user(user):
                     'verbose_name': verbose_name
                 })
     elif user.groups.filter(name='Менеджер по кадрам').exists():
-        # Остальная логика для менеджера по кадрам остается без изменений
         hr_models = [
             ('employee', 'Сотрудники', Employee),
             ('position', 'Должности', Position),
@@ -277,7 +242,6 @@ def is_query_using_allowed_tables(sql_query, allowed_models):
     intermediate_tables = []
     for model_dict in allowed_models:
         model_name = model_dict['name']
-        # Пример: для модели dish добавляем таблицу dish_ingredients
         if model_name == 'dish':
             intermediate_tables.extend(['dish_ingredients'])
         elif model_name == 'delivery':
@@ -288,9 +252,7 @@ def is_query_using_allowed_tables(sql_query, allowed_models):
             intermediate_tables.extend(['reportdish'])
         elif model_name == 'workbook':
             intermediate_tables.extend(['workbook_employees'])
-        # Добавьте другие промежуточные таблицы по необходимости
     
-    # Объединяем разрешенные таблицы
     all_allowed_tables = allowed_table_names + intermediate_tables
     
     # Паттерн для поиска имен таблиц после FROM, JOIN и т.д.
@@ -300,25 +262,15 @@ def is_query_using_allowed_tables(sql_query, allowed_models):
     
     found_tables = []
     for match in matches:
-        table_name = match[1]  # Второй элемент - это имя таблицы
-        # Убираем префикс 'core_' и 'auth_' и другие префиксы
-        clean_table = table_name.replace('CORE_', '').replace('AUTH_', '').replace('SESSIONS_', '').replace('ADMIN_', '').replace('CONTENTTYPES_', '')
+        table_name = match[1]
+        # Убираем префикс 'core_'
+        clean_table = table_name.replace('CORE_', '')
         if clean_table:
             found_tables.append(clean_table.lower())
     
     for table in found_tables:
         # Проверяем, есть ли таблица в разрешенных моделях
         if table not in all_allowed_tables:
-            # Также проверяем, может быть это системная таблица Django
-            if table in ['auth_user', 'auth_group', 'auth_permission', 'django_admin_log', 'django_content_type',
-                         'django_session', 'django_migrations', 'auth_user_groups', 'auth_user_user_permissions',
-                         'django_admin_log', 'auth_group_permissions', 'django_content_type']:
                 return False
-            # Проверяем, начинается ли имя с системных префиксов
-            if any(table.startswith(prefix) for prefix in ['auth_', 'session_', 'admin_', 'contenttype_', 'logentry_', 'permission_', 'group_', 'user_']):
-                return False
-        # Проверяем, что таблица в списке разрешенных
-        if table not in all_allowed_tables:
-            return False
-    
+
     return True

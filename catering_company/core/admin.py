@@ -2,14 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User, Group
-from .models import (
-    AssortmentGroup, UnitOfMeasurement, Ingredient, Dish,
-    Bank, Country, City, Street, Provider, Product,
-    Delivery, DeliveryProduct, Division, Request, RequestProduct,
-    Report, ReportDish, Position, Employee, PlaceOfWork,
-    Department, Profession, Specialization, Classification, WorkBook
-)
-
+from .models import *
 User = get_user_model()
 
 class GroupAdmin(admin.ModelAdmin):

@@ -16,7 +16,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bootstrap5',
 ]
 
 MIDDLEWARE = [
@@ -29,7 +28,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.CurrentUserMiddleware',
     'core.middleware.ThemeMiddleware',
-    'django.middleware.locale.LocaleMiddleware',
 ]
 
 ROOT_URLCONF = 'catering_company.urls'
@@ -46,8 +44,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'django.template.context_processors.debug',
-                'core.context_processors.site_settings',
-                'core.context_processors.theme_context_processor'
             ],
         },
     },
@@ -84,21 +80,14 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Настройки языка
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
-# Поддерживаемые языки
 LANGUAGES = [
     ('ru', 'Русский'),
     ('en', 'English'),
-]
-
-LOCALE_PATHS = [
-    os.path.join(BASE_DIR, 'locale'),
 ]
 
 
@@ -110,26 +99,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-BOOTSTRAP5 = {
-    'css_url': {
-        'url': 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-        'integrity': 'sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM',
-        'crossorigin': 'anonymous',
-    },
-    'javascript_url': {
-        'url': 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-        'integrity': 'sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz',
-        'crossorigin': 'anonymous',
-    },
-    'theme_url': None,
-    'javascript_in_head': False,
-    'wrapper_class': 'mb-3',
-    'inline_wrapper_class': 'mb-3',
-    'horizontal_label_class': 'col-sm-2',
-    'horizontal_field_class': 'col-sm-10',
-}
-
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'

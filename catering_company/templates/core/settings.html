@@ -3,41 +3,6 @@
 
 {% block title %}Настройка{% endblock %}
 
-{% block extra_scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const savedFontSize = localStorage.getItem('fontSize') || 'normal';
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    
-    const savedFontSizeInput = document.querySelector(`input[name="font_size"][value="${savedFontSize}"]`);
-    const savedThemeInput = document.querySelector(`input[name="theme"][value="${savedTheme}"]`);
-    
-    if (savedFontSizeInput) savedFontSizeInput.checked = true;
-    if (savedThemeInput) savedThemeInput.checked = true;
-    
-    // Обработчик изменения темы в форме настроек
-    const themeInputs = document.querySelectorAll('input[name="theme"]');
-    themeInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            const newTheme = this.value;
-            // Используем глобальные функции из base.html
-            updateTheme(newTheme);
-            saveThemeToServer(newTheme);
-        });
-    });
-    
-    // Обработчик изменения размера шрифта
-    const fontSizeInputs = document.querySelectorAll('input[name="font_size"]');
-    fontSizeInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            const newSize = this.value;
-            updateFontSize(newSize);
-        });
-    });
-});
-</script>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -175,10 +140,42 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    const savedFontSize = localStorage.getItem('fontSize') || 'normal';
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    
+    const savedFontSizeInput = document.querySelector(`input[name="font_size"][value="${savedFontSize}"]`);
+    const savedThemeInput = document.querySelector(`input[name="theme"][value="${savedTheme}"]`);
+    
+    if (savedFontSizeInput) savedFontSizeInput.checked = true;
+    if (savedThemeInput) savedThemeInput.checked = true;
+    
+    // Обработчик изменения темы в форме настроек
+    const themeInputs = document.querySelectorAll('input[name="theme"]');
+    themeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const newTheme = this.value;
+            // Используем глобальные функции из base.html
+            updateTheme(newTheme);
+            saveThemeToServer(newTheme);
+        });
+    });
+    
+    // Обработчик изменения размера шрифта
+    const fontSizeInputs = document.querySelectorAll('input[name="font_size"]');
+    fontSizeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const newSize = this.value;
+            updateFontSize(newSize);
+        });
+    });
+});
+
 function handleThemeChange(radio) {
     if (radio.checked) {
         const newTheme = radio.value;
-        // Немедленно применяем тему без отправки формы
+        // Применяем тему без отправки формы
         updateTheme(newTheme);
         saveThemeToServer(newTheme);
     }

@@ -78,7 +78,6 @@
                 {% endif %}
             </div>
             
-            <!-- Скрытая форма для экспорта -->
             <form id="export-form" method="post" style="display: none;">
                 {% csrf_token %}
                 <input type="hidden" name="sql_query" value="{{ sql_query }}">

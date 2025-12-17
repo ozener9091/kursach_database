@@ -47,11 +47,11 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Период</label>
-                        <select class="form-select" id="time_period">
-                            <option value="7">Последние 7 дней</option>
-                            <option value="30" selected>Последние 30 дней</option>
-                            <option value="90">Последние 90 дней</option>
-                            <option value="365">Последний год</option>
+                        <select class="form-select" name="time_period" id="time_period" >
+                            <option value="7" {%if date_range.period == '7' %}selected{%endif%}>Последние 7 дней</option>
+                            <option value="30" {%if date_range.period == '30' %}selected{%endif%}>Последние 30 дней</option>
+                            <option value="90" {%if date_range.period == '90' %}selected{%endif%}>Последние 90 дней</option>
+                            <option value="365" {%if date_range.period == '365' %}selected{%endif%}>Последний год</option>
                         </select>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
@@ -117,7 +117,7 @@ function renderCharts() {
                     height: 400
                 };
             {% else %}
-                // Для других типов диаграмм (bar, line, scatter и т.д.)
+                // Для других типов диаграмм
                 const data = [{
                     x: {{ chart.x_data|safe }},
                     y: {{ chart.y_data|safe }},
@@ -152,18 +152,14 @@ document.getElementById('time_period').addEventListener('change', function() {
 
 // Обработчик сброса фильтров
 document.getElementById('reset-filters').addEventListener('click', function(e) {
-    // При сбросе переходим на основной URL без параметров
     window.location.href = '{% url "analytics" %}';
 });
 
 // Запускаем отрисовку графиков после загрузки DOM и Plotly
 document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем, загружен ли Plotly
     if (typeof Plotly !== 'undefined') {
         renderCharts();
         console.log('Charts rendered successfully');
-    } else {
-        console.error('Plotly is not loaded');
     }
 });
 </script>

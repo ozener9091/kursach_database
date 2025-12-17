@@ -10,13 +10,9 @@ from django.db import connection, models
 from django.db.models import Count, Sum, Avg, F
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.db.models.functions import TruncMonth, TruncDay
+from django.db.models.functions import TruncMonth, TruncDay, ExtractYear
 from django.apps import apps
-
-from datetime import datetime, timedelta
-import matplotlib
-matplotlib.use('Agg')
-
+from datetime import datetime, timedelta, date
 from .models import *
 from .forms import *
 from .permissions import *
@@ -38,20 +34,18 @@ def about_app(request):
     return render(request, 'core/about.html')
 
 def miscellaneous_page(request):
-    """Страница "Разное" """
+    """Страница Разное """
     return render(request, 'core/miscellaneous.html')
 
 @login_required
 def home(request):
     """Домашняя страница"""
-    return render(request, 'core/home.html', {'title': 'Главная страница'})
+    return render(request, 'core/home.html')
 
 @login_required
 def dashboard(request):
     """Панель управления"""
-
     context = {
-        'title': 'Панель управления',
         'user': request.user,
         'recent_actions': ActionLog.objects.filter(user=request.user)[:10],
         'dish_count': Dish.objects.count(),
@@ -91,7 +85,7 @@ def password_reset_request(request):
                 Администрация сайта
                 '''
                 
-                from_email = 'noreply@localhost'
+                from_email = 'postavte_5_za_kursach@localhost'
                 
                 send_mail(
                     subject,
@@ -117,7 +111,6 @@ def director_tables(request):
     if not request.user.groups.filter(name='Директор').exists() and not request.user.is_superuser:
         messages.error(request, 'У вас нет доступа к этой странице')
         return redirect('dashboard')
-    
     
     app_models = apps.get_app_config('core').get_models()
     
@@ -347,14 +340,12 @@ def hr_tables(request):
 def sql_query_page(request):
     """Страница для выполнения SQL SELECT запросов"""
     user = request.user
-    
     available_models = get_available_models_for_user(user)
-    
     template_queries = get_template_queries_for_user(user)
     
     if request.method == 'POST':
+        sql_query = request.POST.get('sql_query', '').strip()
         if 'export' in request.POST:
-            sql_query = request.POST.get('sql_query', '').strip()
             
             if not sql_query:
                 messages.error(request, 'Введите SQL запрос для экспорта!')
@@ -365,8 +356,6 @@ def sql_query_page(request):
                 })
             
             return export_sql_results_to_excel(sql_query, user)
-        
-        sql_query = request.POST.get('sql_query', '').strip()
         
         if not is_valid_select_query(sql_query):
             messages.error(request, 'Разрешены только SELECT запросы!')
@@ -413,17 +402,11 @@ def sql_query_page(request):
 
 @login_required
 def update_theme(request):
-    """Обновление темы через AJAX"""
+    """Обновление темы"""
     try:
         data = json.loads(request.body)
         theme = data.get('theme', 'light')
-        
-        # Сохраняем в сессии
         request.session['theme'] = theme
-        
-        # Также сохраняем в профиле пользователя, если нужно
-        # request.user.profile.theme = theme
-        # request.user.profile.save()
         
         return JsonResponse({'status': 'success', 'theme': theme})
     except Exception as e:
@@ -432,21 +415,6 @@ def update_theme(request):
 @login_required
 def settings_page(request):
     """Страница настроек"""
-    if request.method == 'POST':
-        font_size = request.POST.get('font_size', 'normal')
-        language = request.POST.get('language', 'ru')
-        theme = request.POST.get('theme', 'light')
-        
-        request.session['font_size'] = font_size
-        request.session['language'] = language
-        request.session['theme'] = theme
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'success', 'message': 'Настройки сохранены!'})
-        else:
-            messages.success(request, 'Настройки сохранены!')
-            return redirect('settings')
-    
     font_size = request.session.get('font_size', 'normal')
     language = request.session.get('language', 'ru')
     theme = request.session.get('theme', 'light')
@@ -479,291 +447,286 @@ def change_password(request):
 
 def generate_charts_data(user, start_date=None, end_date=None):
     """Генерирует данные для графиков с возможностью фильтрации по дате"""
-    charts_data = []
     
+    charts_data = []
     date_filter = {}
+
     if start_date:
         date_filter['date__gte'] = start_date
     if end_date:
         date_filter['date__lte'] = end_date
     
+    # Топ-5 блюд по количеству продаж
     if user.has_perm('core.view_dish') and user.has_perm('core.view_reportdish'):
-        try:
-            top_dishes_query = ReportDish.objects.select_related('report').values('dish__name')
-            
-            if start_date or end_date:
-                top_dishes_query = top_dishes_query.filter(report__date__range=[start_date, end_date])
-            
-            top_dishes = top_dishes_query.annotate(
+
+        top_dishes_query = ReportDish.objects.select_related('report').values('dish__name')
+        if start_date or end_date:
+            top_dishes_query = top_dishes_query.filter(report__date__range=[start_date, end_date])
+
+        top_dishes = top_dishes_query.annotate(
                 total_quantity=Sum('quantity')
             ).order_by('-total_quantity')[:5]
+        
+        if top_dishes:
+            dish_names = [item['dish__name'] for item in top_dishes if item['dish__name']]
+            quantities = [float(item['total_quantity'] or 0) for item in top_dishes]
+                    
+            charts_data.append({
+                'title': 'Топ-5 блюд по количеству продаж',
+                'chart_id': 'top_dishes_chart',
+                'chart_type': 'bar',
+                'x_data': dish_names,
+                'y_data': quantities,
+                'x_label': 'Блюда',
+                'y_label': 'Количество',
+                'color': 'skyblue'
+            })       
             
-            if top_dishes:
-                dish_names = [item['dish__name'] for item in top_dishes if item['dish__name']]
-                quantities = [float(item['total_quantity'] or 0) for item in top_dishes]
-                
-                charts_data.append({
-                    'title': 'Топ-5 блюд по количеству продаж',
-                    'chart_id': 'top_dishes_chart',
-                    'chart_type': 'bar',
-                    'x_data': dish_names,
-                    'y_data': quantities,
-                    'x_label': 'Блюда',
-                    'y_label': 'Количество',
-                    'color': 'skyblue'
-                })
-        except Exception as e:
-            print(f"Error generating top dishes chart: {e}")
-    
+    # Выручка по группам ассортимента   
     if user.has_perm('core.view_dish') and user.has_perm('core.view_reportdish'):
-        try:
-            sales_by_group_query = ReportDish.objects.select_related('dish', 'dish__assortment_group', 'report').values(
+
+        sales_by_group_query = ReportDish.objects.select_related('dish', 'dish__assortment_group', 'report').values(
                 'dish__assortment_group__name'
             )
-            
-            if start_date or end_date:
+        if start_date or end_date:
                 sales_by_group_query = sales_by_group_query.filter(report__date__range=[start_date, end_date])
             
-            sales_by_group = sales_by_group_query.annotate(
+        sales_by_group = sales_by_group_query.annotate(
                 total_revenue=Sum(F('quantity') * F('dish__price'))
             ).order_by('-total_revenue')
-            
-            if sales_by_group:
-                group_names = [item['dish__assortment_group__name'] for item in sales_by_group if item['dish__assortment_group__name']]
-                revenues = [float(item['total_revenue'] or 0) for item in sales_by_group]
-                
-                charts_data.append({
+        
+        if sales_by_group:
+            group_names = [item['dish__assortment_group__name'] for item in sales_by_group if item['dish__assortment_group__name']]
+            revenues = [float(item['total_revenue'] or 0) for item in sales_by_group]
+                    
+            charts_data.append({
                     'title': 'Выручка по группам ассортимента',
                     'chart_id': 'revenue_by_group_pie_chart',
                     'chart_type': 'pie',
                     'labels': group_names,
                     'values': revenues,
                     'color': 'lightgreen'
-                })
-        except Exception as e:
-            print(f"Error generating revenue by group pie chart: {e}")
-    
+                })  
+                           
+    # Продукты с низким остатком (меньше 40 единиц)
     if user.has_perm('core.view_product'):
-        try:
-            low_stock_products = Product.objects.filter(
-                remaining_stock__lt=20
+        low_stock_products = Product.objects.filter(
+            remaining_stock__lt=40
             ).order_by('remaining_stock')[:10]
-            
-            if low_stock_products:
-                product_names = [p.name for p in low_stock_products]
-                stock_levels = [float(p.remaining_stock) for p in low_stock_products]
-                
-                charts_data.append({
-                    'title': 'Продукты с низким остатком',
-                    'chart_id': 'low_stock_chart',
-                    'chart_type': 'bar',
-                    'x_data': product_names,
-                    'y_data': stock_levels,
-                    'x_label': 'Продукты',
-                    'y_label': 'Остаток',
-                    'color': 'orange'
-                })
-        except Exception as e:
-            print(f"Error generating low stock chart: {e}")
-    
-    if user.has_perm('core.view_delivery'):
-        try:
-            deliveries_query = Delivery.objects.all()
-            
-            if start_date:
-                deliveries_query = deliveries_query.filter(date__gte=start_date)
-            if end_date:
-                deliveries_query = deliveries_query.filter(date__lte=end_date)
         
-            if not start_date and not end_date:
-                start_date_calc = datetime.now() - timedelta(days=365)
-                deliveries_query = deliveries_query.filter(date__gte=start_date_calc)
-            
-            monthly_deliveries = deliveries_query.annotate(
-                month=TruncMonth('date')
-            ).values('month').annotate(
-                delivery_count=Count('id')
-            ).order_by('month')
-            
-            if monthly_deliveries:
-                months = [item['month'].strftime('%Y-%m') for item in monthly_deliveries]
-                counts = [item['delivery_count'] for item in monthly_deliveries]
+        if low_stock_products:
+            product_names = [p.name for p in low_stock_products]
+            stock_levels = [float(p.remaining_stock) for p in low_stock_products]
+                        
+            charts_data.append({
+                'title': 'Продукты с низким остатком',
+                'chart_id': 'low_stock_chart',
+                'chart_type': 'bar',
+                'x_data': product_names,
+                'y_data': stock_levels,
+                'x_label': 'Продукты',
+                'y_label': 'Остаток',
+                'color': 'orange'
+            })            
                 
-                charts_data.append({
-                    'title': 'Количество поставок по месяцам',
-                    'chart_id': 'monthly_deliveries_chart',
-                    'chart_type': 'line',
-                    'x_data': months,
-                    'y_data': counts,
-                    'x_label': 'Месяц',
-                    'y_label': 'Количество поставок',
-                    'color': 'purple'
-                })
-        except Exception as e:
-            print(f"Error generating deliveries chart: {e}")
-    
+    # Количество поставок по месяцам
+    if user.has_perm('core.view_delivery'):
+
+        deliveries_query = Delivery.objects.all()
+            
+        if start_date:
+            deliveries_query = deliveries_query.filter(date__gte=start_date)
+        if end_date:
+            deliveries_query = deliveries_query.filter(date__lte=end_date)            
+        
+        if not start_date and not end_date:
+            start_date_calc = datetime.now() - timedelta(days=365)
+            end_date = datetime.now()
+            deliveries_query = deliveries_query.filter(date__gte=start_date_calc)
+            deliveries_query = deliveries_query.filter(date__lte=end_date)
+            
+        monthly_deliveries = deliveries_query.annotate(
+            month=TruncMonth('date')
+        ).values('month').annotate(
+            delivery_count=Count('id')
+        ).order_by('month')
+            
+        if monthly_deliveries:
+            months = [item['month'].strftime('%Y-%m') for item in monthly_deliveries]
+            counts = [item['delivery_count'] for item in monthly_deliveries]
+                
+            charts_data.append({
+                'title': 'Количество поставок по месяцам',
+                'chart_id': 'monthly_deliveries_chart',
+                'chart_type': 'line',
+                'x_data': months,
+                'y_data': counts,
+                'x_label': 'Месяц',
+                'y_label': 'Количество поставок',
+                'color': 'purple'
+            })
+
+    # Средняя цена блюд по группам
     if user.has_perm('core.view_dish'):
-        try:
-            avg_price_by_group = Dish.objects.values(
-                'assortment_group__name'
-            ).annotate(
-                avg_price=Avg('price')
-            ).order_by('-avg_price')
+
+        avg_price_by_group = Dish.objects.values(
+            'assortment_group__name'
+        ).annotate(
+            avg_price=Avg('price')
+        ).order_by('-avg_price')
             
-            if avg_price_by_group:
-                group_names = [item['assortment_group__name'] for item in avg_price_by_group if item['assortment_group__name']]
-                avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_group]
+        if avg_price_by_group:
+            group_names = [item['assortment_group__name'] for item in avg_price_by_group if item['assortment_group__name']]
+            avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_group]
                 
-                charts_data.append({
-                    'title': 'Средняя цена блюд по группам',
-                    'chart_id': 'avg_price_chart',
-                    'chart_type': 'bar',
-                    'x_data': group_names,
-                    'y_data': avg_prices,
-                    'x_label': 'Группы ассортимента',
-                    'y_label': 'Средняя цена (₽)',
-                    'color': 'coral'
-                })
-        except Exception as e:
-            print(f"Error generating avg price chart: {e}")
-    
+            charts_data.append({
+                'title': 'Средняя цена блюд по группам',
+                'chart_id': 'avg_price_chart',
+                'chart_type': 'bar',
+                'x_data': group_names,
+                'y_data': avg_prices,
+                'x_label': 'Группы ассортимента',
+                'y_label': 'Средняя цена (₽)',
+                'color': 'coral'
+            })
+
+    # Распределение сотрудников по должности
     if user.has_perm('core.view_employee'):
-        try:
-            employees_by_position = Employee.objects.values(
+
+        employees_by_position = Employee.objects.values(
                 'position__name'
             ).annotate(
                 employee_count=Count('id')
             ).order_by('-employee_count')
             
-            if employees_by_position:
-                position_names = [item['position__name'] for item in employees_by_position if item['position__name']]
-                counts = [item['employee_count'] for item in employees_by_position]
+        if employees_by_position:
+            position_names = [item['position__name'] for item in employees_by_position if item['position__name']]
+            counts = [item['employee_count'] for item in employees_by_position]
                 
-                charts_data.append({
-                    'title': 'Распределение сотрудников по должности',
-                    'chart_id': 'employees_by_position_pie_chart',
-                    'chart_type': 'pie',
-                    'labels': position_names,
-                    'values': counts,
-                    'color': 'lightblue'
-                })
-        except Exception as e:
-            print(f"Error generating employees by position chart: {e}")
-    
+            charts_data.append({
+                'title': 'Распределение сотрудников по должности',
+                'chart_id': 'employees_by_position_pie_chart',
+                'chart_type': 'pie',
+                'labels': position_names,
+                'values': counts,
+                'color': 'lightblue'
+            })
+
+    # Количество заявок по дням
     if user.has_perm('core.view_request'):
-        try:
-            requests_query = Request.objects.all()
+
+        requests_query = Request.objects.all()
             
-            if start_date:
-                requests_query = requests_query.filter(date__date__gte=start_date)
-            if end_date:
-                requests_query = requests_query.filter(date__date__lte=end_date)
+        if start_date:
+            requests_query = requests_query.filter(date__gte=start_date)
+        if end_date:
+            requests_query = requests_query.filter(date__lte=end_date)
             
-            if not start_date and not end_date:
-                start_date_calc = datetime.now() - timedelta(days=30)
-                requests_query = requests_query.filter(date__date__gte=start_date_calc)
+        if not start_date and not end_date:
+            start_date_calc = datetime.now() - timedelta(days=60)
+            end_date_calc = datetime.now()
+            requests_query = requests_query.filter(date__gte=start_date_calc)
+            requests_query = requests_query.filter(date__lte=end_date_calc)
             
-            daily_requests = requests_query.annotate(
-                day=TruncDay('date')
-            ).values('day').annotate(
-                request_count=Count('id')
-            ).order_by('day')
+        daily_requests = requests_query.annotate(
+            day=TruncDay('date')
+        ).values('day').annotate(
+            request_count=Count('id')
+        ).order_by('day')
             
-            if daily_requests:
-                days = [item['day'].strftime('%Y-%m-%d') for item in daily_requests]
-                counts = [item['request_count'] for item in daily_requests]
+        if daily_requests:
+            days = [item['day'].strftime('%Y-%m-%d') for item in daily_requests]
+            counts = [item['request_count'] for item in daily_requests]
                 
-                charts_data.append({
-                    'title': 'Количество заявок по дням',
-                    'chart_id': 'daily_requests_chart',
-                    'chart_type': 'line',
-                    'x_data': days,
-                    'y_data': counts,
-                    'x_label': 'Дата',
-                    'y_label': 'Количество заявок',
-                    'color': 'red'
-                })
-        except Exception as e:
-            print(f"Error generating daily requests chart: {e}")
-    
+            charts_data.append({
+                'title': 'Количество заявок по дням',
+                'chart_id': 'daily_requests_chart',
+                'chart_type': 'line',
+                'x_data': days,
+                'y_data': counts,
+                'x_label': 'Дата',
+                'y_label': 'Количество заявок',
+                'color': 'red'
+            })
+
+    # Средний возраст сотрудников по месту работы
     if user.has_perm('core.view_employee'):
-        try:
-            from datetime import date
-            from django.db.models import DateField, Case, When, IntegerField
-            from django.db.models.functions import ExtractYear
-            
-            employees_with_age = Employee.objects.annotate(
-                age=ExtractYear('birthday_date') - ExtractYear(date.today())
+
+        employee_ages_by_workplace = WorkBook.objects.select_related(
+                'employee', 'place_of_work'
+            ).annotate(
+                age=ExtractYear(date.today()) - ExtractYear('employee__birthday_date')
             ).values(
                 'place_of_work__name'
             ).annotate(
                 avg_age=Avg('age')
             ).order_by('place_of_work__name')
-            
-            if employees_with_age:
-                place_names = [item['place_of_work__name'] for item in employees_with_age if item['place_of_work__name']]
-                avg_ages = [float(item['avg_age'] or 0) for item in employees_with_age]
-                
-                charts_data.append({
-                    'title': 'Средний возраст сотрудников по месту работы',
-                    'chart_id': 'avg_age_by_place_chart',
-                    'chart_type': 'bar',
-                    'x_data': place_names,
-                    'y_data': avg_ages,
-                    'x_label': 'Место работы',
-                    'y_label': 'Средний возраст',
-                    'color': 'yellow'
-                })
-        except Exception as e:
-            print(f"Error generating avg age chart: {e}")
-    
+
+        chart_data = [
+            item for item in employee_ages_by_workplace
+            if item['place_of_work__name']
+        ]
+
+        if chart_data:
+            place_names = [item['place_of_work__name'] for item in chart_data]
+            avg_ages = [float(item['avg_age'] or 0) for item in chart_data]
+
+            charts_data.append({
+                'title': 'Средний возраст сотрудников по месту работы',
+                'chart_id': 'avg_age_by_place_chart',
+                'chart_type': 'bar',
+                'x_data': place_names,
+                'y_data': avg_ages,
+                'x_label': 'Место работы',
+                'y_label': 'Средний возраст',
+                'color': 'yellow'
+            })
+
+    # Объем поставок по поставщикам
     if user.has_perm('core.view_delivery') and user.has_perm('core.view_deliveryproduct'):
-        try:
-            delivery_volume_by_provider = DeliveryProduct.objects.select_related('delivery', 'delivery__provider').values(
+
+        delivery_volume_by_provider = DeliveryProduct.objects.select_related('delivery', 'delivery__provider').values(
                 'delivery__provider__name'
             ).annotate(
                 total_quantity=Sum('quantity')
             ).order_by('-total_quantity')
             
-            if delivery_volume_by_provider:
-                provider_names = [item['delivery__provider__name'] for item in delivery_volume_by_provider if item['delivery__provider__name']]
-                quantities = [float(item['total_quantity'] or 0) for item in delivery_volume_by_provider]
+        if delivery_volume_by_provider:
+            provider_names = [item['delivery__provider__name'] for item in delivery_volume_by_provider if item['delivery__provider__name']]
+            quantities = [float(item['total_quantity'] or 0) for item in delivery_volume_by_provider]
                 
-                charts_data.append({
-                    'title': 'Объем поставок по поставщикам',
-                    'chart_id': 'delivery_volume_pie_chart',
-                    'chart_type': 'pie',
-                    'labels': provider_names,
-                    'values': quantities,
-                    'color': 'pink'
-                })
-        except Exception as e:
-            print(f"Error generating delivery volume chart: {e}")
-    
+            charts_data.append({
+                'title': 'Объем поставок по поставщикам',
+                'chart_id': 'delivery_volume_pie_chart',
+                'chart_type': 'pie',
+                'labels': provider_names,
+                'values': quantities,
+                'color': 'pink'
+            })
+
+    # Средняя цена продуктов по поставщикам
     if user.has_perm('core.view_product'):
-        try:
-            avg_price_by_category = Product.objects.values(
+
+        avg_price_by_category = Product.objects.values(
                 'provider__name'
             ).annotate(
                 avg_price=Avg('purchase_price')
             ).order_by('-avg_price')[:10]
             
-            if avg_price_by_category:
-                provider_names = [item['provider__name'] for item in avg_price_by_category if item['provider__name']]
-                avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_category]
+        if avg_price_by_category:
+            provider_names = [item['provider__name'] for item in avg_price_by_category if item['provider__name']]
+            avg_prices = [float(item['avg_price'] or 0) for item in avg_price_by_category]
                 
-                charts_data.append({
-                    'title': 'Средняя цена продуктов по поставщикам',
-                    'chart_id': 'avg_price_by_provider_chart',
-                    'chart_type': 'bar',
-                    'x_data': provider_names,
-                    'y_data': avg_prices,
-                    'x_label': 'Поставщики',
-                    'y_label': 'Средняя цена (₽)',
-                    'color': 'brown'
-                })
-        except Exception as e:
-            print(f"Error generating avg price by provider chart: {e}")
+            charts_data.append({
+                'title': 'Средняя цена продуктов по поставщикам',
+                'chart_id': 'avg_price_by_provider_chart',
+                'chart_type': 'bar',
+                'x_data': provider_names,
+                'y_data': avg_prices,
+                'x_label': 'Поставщики',
+                'y_label': 'Средняя цена (₽)',
+                'color': 'brown'
+            })
     
     return charts_data
 
@@ -774,19 +737,25 @@ def analytics_dashboard(request):
     
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
+    time_period_str = request.GET.get('time_period')
     
     start_date = None
     end_date = None
+    time_period = None
     
     if start_date_str:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
     if end_date_str:
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+    if time_period_str:
+        time_period = time_period_str
     
     if not start_date:
         start_date = (datetime.now() - timedelta(days=30)).date()
     if not end_date:
         end_date = datetime.now().date()
+    if not time_period:
+        time_period = '30'
     
     charts_data = generate_charts_data(user, start_date, end_date)
     
@@ -794,7 +763,8 @@ def analytics_dashboard(request):
         'charts_data': charts_data,
         'date_range': {
             'start': start_date.strftime('%Y-%m-%d'),
-            'end': end_date.strftime('%Y-%m-%d')
+            'end': end_date.strftime('%Y-%m-%d'),
+            'period': time_period
         }
     }
     
@@ -820,7 +790,8 @@ class UniversalTableView(LoginRequiredMixin, ListView):
 
         queryset = super().get_queryset()
         
-        search_query = self.request.GET.get('search', '').strip()
+        search_query = self.request.GET.get('search', '')
+        search_query = search_query.replace(',', '.')
         
         if search_query and self.model:
             filtered_objects = []
@@ -844,15 +815,14 @@ class UniversalTableView(LoginRequiredMixin, ListView):
                         
                         if field_value is not None:
                             if hasattr(field_value, 'strftime'):
-                                if hasattr(field_value, 'date'):
-                                    field_value = field_value.strftime('%d.%m.%Y')
-                                else:
-                                    field_value = str(field_value)
-                            
-                            elif hasattr(field_value, '_meta'):
+                                field_value = field_value.strftime('%d.%m.%Y')
+                            else:
                                 field_value = str(field_value)
                             
-                            record_string += " " + str(field_value)
+                        elif hasattr(field_value, '_meta'):
+                            field_value = str(field_value)
+                            
+                        record_string += " " + str(field_value)
                     except:
                         continue
                 
@@ -869,22 +839,21 @@ class UniversalTableView(LoginRequiredMixin, ListView):
         direction = self.request.GET.get('direction', 'asc')
         
         if order_by:
-            try:
-                field_exists = False
-                for field in self.model._meta.get_fields():
-                    if field.name == order_by and not field.many_to_many and not field.auto_created:
-                        field_exists = True
-                        break
+
+            field_exists = False
+            for field in self.model._meta.get_fields():
+                if field.name == order_by and not field.many_to_many and not field.auto_created:
+                    field_exists = True
+                    break
                 
-                if field_exists:
-                    if direction == 'desc':
-                        order_by_field = f'-{order_by}'
-                    else:
-                        order_by_field = order_by
+            if field_exists:
+                if direction == 'desc':
+                    order_by_field = f'-{order_by}'
+                else:
+                    order_by_field = order_by
                     
-                    queryset = queryset.order_by(order_by_field)
-            except:
-                pass
+                queryset = queryset.order_by(order_by_field)
+            
         
         return queryset
     
@@ -962,25 +931,18 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
     
     def get_form_class(self):
         if self.model == Dish:
-            from .forms import DishForm
             return DishForm
         elif self.model == Report:
-            from .forms import ReportForm
             return ReportForm
         elif self.model == Request:
-            from .forms import RequestForm
             return RequestForm
         elif self.model == Delivery:
-            from .forms import DeliveryForm
             return DeliveryForm
         elif self.model == WorkBook:
-            from .forms import WorkBookForm
             return WorkBookForm
         elif self.model == Employee:
-            from .forms import EmployeeForm
             return EmployeeForm
         else:
-            from .forms import UniversalForm
             class DynamicForm(UniversalForm):
                 class Meta:
                     model = self.model
@@ -989,7 +951,7 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
     
     def get_success_url(self):
         if 'action' in self.request.POST and self.request.POST['action'] == 'save_and_add':
-            return self.request.path  # Остаемся на той же странице
+            return self.request.path
         else:
             return reverse_lazy(f'table_{self.model._meta.model_name}')
     
@@ -1002,10 +964,8 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
         
         if self.model == Dish:
             all_ingredients = Ingredient.objects.all()
-            selected_ingredients = []
-            available_ingredients = all_ingredients
-            context['selected_ingredients'] = selected_ingredients
-            context['available_ingredients'] = available_ingredients
+            context['selected_ingredients'] = []
+            context['available_ingredients'] = all_ingredients
         
         return context
     
@@ -1022,7 +982,6 @@ class UniversalCreateView(LoginRequiredMixin, CreateView):
         return response
     
     def dispatch(self, request, *args, **kwargs):
-        # Проверяем права на добавление
         if not request.user.has_perm(f'core.add_{self.model._meta.model_name}'):
             messages.error(request, 'У вас нет прав для добавления записей в эту таблицу')
             return redirect('dashboard')
@@ -1036,7 +995,6 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
     form_class = None
     
     def get_form_class(self):
-        # Для модели Dish используем специальный Form
         if self.model == Dish:
             from .forms import DishForm
             return DishForm
@@ -1056,7 +1014,6 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
             from .forms import EmployeeForm
             return EmployeeForm
         else:
-            from .forms import UniversalForm
             class DynamicForm(UniversalForm):
                 class Meta:
                     model = self.model
@@ -1100,7 +1057,6 @@ class UniversalUpdateView(LoginRequiredMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
     
     def get_form_kwargs(self):
-        """Переопределяем метод для передачи instance"""
         kwargs = super().get_form_kwargs()
         if hasattr(self, 'object') and self.object:
             kwargs['instance'] = self.object

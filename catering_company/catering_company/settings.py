@@ -4,6 +4,8 @@ from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(4(s3#l-8f_%5o^803hgf$ilvmcykeqnd44^qgs8!5ts5g5j%x'
+YANDEX_TRANSLATE_API_KEY = 'AQVN3KP93xyLIADbRIRpaGZK4DmV9cL8gVvVs2rg'
+YANDEX_FOLDER_ID = 'b1g3ju1ri1umfkbu9dg7'
 DEBUG = True
 ALLOWED_HOSTS = ['*']
 
@@ -28,6 +30,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.CurrentUserMiddleware',
+    'core.middleware.ThemeMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
 ]
 
 ROOT_URLCONF = 'catering_company.urls'
@@ -45,6 +49,7 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.template.context_processors.debug',
                 'core.context_processors.site_settings',
+                'core.context_processors.theme_context_processor'
             ],
         },
     },
@@ -81,13 +86,22 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Настройки языка
 LANGUAGE_CODE = 'ru-ru'
-
 TIME_ZONE = 'Europe/Moscow'
-
 USE_I18N = True
-
+USE_L10N = True
 USE_TZ = True
+
+# Поддерживаемые языки
+LANGUAGES = [
+    ('ru', 'Русский'),
+    ('en', 'English'),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
 
 
 STATIC_URL = 'static/'

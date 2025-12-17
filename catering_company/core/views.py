@@ -10,7 +10,7 @@ from django.db import connection, models
 from django.db.models import Count, Sum, Avg, F
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncDay
 from django.apps import apps
 
 from datetime import datetime, timedelta
@@ -22,6 +22,7 @@ from .forms import *
 from .permissions import *
 from .decorators import *
 from .sql import *
+import json
 
 
 def help_page(request):
@@ -411,14 +412,34 @@ def sql_query_page(request):
     })
 
 @login_required
+def update_theme(request):
+    """Обновление темы через AJAX"""
+    try:
+        data = json.loads(request.body)
+        theme = data.get('theme', 'light')
+        
+        # Сохраняем в сессии
+        request.session['theme'] = theme
+        
+        # Также сохраняем в профиле пользователя, если нужно
+        # request.user.profile.theme = theme
+        # request.user.profile.save()
+        
+        return JsonResponse({'status': 'success', 'theme': theme})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
 def settings_page(request):
     """Страница настроек"""
     if request.method == 'POST':
         font_size = request.POST.get('font_size', 'normal')
         language = request.POST.get('language', 'ru')
+        theme = request.POST.get('theme', 'light')
         
         request.session['font_size'] = font_size
         request.session['language'] = language
+        request.session['theme'] = theme
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'status': 'success', 'message': 'Настройки сохранены!'})
@@ -428,10 +449,12 @@ def settings_page(request):
     
     font_size = request.session.get('font_size', 'normal')
     language = request.session.get('language', 'ru')
+    theme = request.session.get('theme', 'light')
     
     context = {
         'font_size': font_size,
         'language': language,
+        'theme': theme,
     }
     return render(request, 'core/settings.html', context)
 

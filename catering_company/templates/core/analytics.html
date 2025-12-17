@@ -30,7 +30,6 @@
         </div>
     </div>
 
-    <!-- Фильтры -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">⚙️ Фильтры данных</h5>
@@ -70,7 +69,6 @@
         </div>
     </div>
 
-    <!-- Графики -->
     <div class="row">
         {% for chart in charts_data %}
         <div class="col-lg-6 mb-4">
@@ -101,7 +99,7 @@
 // Функция отрисовки графиков
 function renderCharts() {
     {% for chart in charts_data %}
-        (function() {  // Используем IIFE для изоляции переменных
+        (function() {
             {% if chart.chart_type == 'pie' %}
                 // Для круговой диаграммы
                 const data = [{

@@ -5,96 +5,36 @@
 
 {% block extra_scripts %}
 <script>
-// Функция обновления размера шрифта
-function updateFontSize(newSize) {
-    const body = document.body;
-    body.classList.remove('font-small', 'font-large', 'font-xlarge');
-    
-    switch(newSize) {
-        case 'small':
-            body.classList.add('font-small');
-            break;
-        case 'large':
-            body.classList.add('font-large');
-            break;
-        case 'xlarge':
-            body.classList.add('font-xlarge');
-            break;
-        default:
-            // normal size, no additional class needed
-    }
-    
-    localStorage.setItem('fontSize', newSize);
-}
-
-// При загрузке страницы применяем сохраненные настройки
 document.addEventListener('DOMContentLoaded', function() {
     const savedFontSize = localStorage.getItem('fontSize') || 'normal';
+    const savedTheme = localStorage.getItem('theme') || 'light';
     
-    updateFontSize(savedFontSize);
+    const savedFontSizeInput = document.querySelector(`input[name="font_size"][value="${savedFontSize}"]`);
+    const savedThemeInput = document.querySelector(`input[name="theme"][value="${savedTheme}"]`);
     
-    // Обработка изменения размера шрифта
+    if (savedFontSizeInput) savedFontSizeInput.checked = true;
+    if (savedThemeInput) savedThemeInput.checked = true;
+    
+    // Обработчик изменения темы в форме настроек
+    const themeInputs = document.querySelectorAll('input[name="theme"]');
+    themeInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const newTheme = this.value;
+            // Используем глобальные функции из base.html
+            updateTheme(newTheme);
+            saveThemeToServer(newTheme);
+        });
+    });
+    
+    // Обработчик изменения размера шрифта
     const fontSizeInputs = document.querySelectorAll('input[name="font_size"]');
     fontSizeInputs.forEach(input => {
         input.addEventListener('change', function() {
-            updateFontSize(this.value);
+            const newSize = this.value;
+            updateFontSize(newSize);
         });
     });
 });
-
-// Обработка отправки формы
-document.getElementById('settings-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const theme = formData.get('theme');
-    const fontSize = formData.get('font_size');
-    
-    // Обновляем тему и размер шрифта немедленно
-    updateTheme(theme);
-    updateFontSize(fontSize);
-    
-    // Отправляем форму
-    fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        showMessage('Настройки сохранены!', 'success');
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showMessage('Ошибка при сохранении настроек', 'danger');
-    });
-});
-
-function showMessage(message, type) {
-    // Создаем сообщение
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.role = 'alert';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    // Добавляем в начало контейнера сообщений
-    const messagesContainer = document.querySelector('.messages-container');
-    if (messagesContainer) {
-        messagesContainer.appendChild(alertDiv);
-    } else {
-        // Если контейнера нет, создаем его
-        const body = document.querySelector('main');
-        const container = document.createElement('div');
-        container.className = 'messages-container';
-        container.appendChild(alertDiv);
-        body.insertBefore(container, body.firstChild);
-    }
-}
 </script>
 {% endblock %}
 
@@ -116,19 +56,21 @@ function showMessage(message, type) {
                     <h3 class="mb-0">🔧 Персональные настройки</h3>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="settings-form">
+                    <form method="post" id="settings-form" action="{% url 'settings' %}">
                         {% csrf_token %}
                         
                         <div class="mb-4">
                             <h5>🔤 Язык интерфейса</h5>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="language" id="lang_ru" value="ru" {% if language == 'ru' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="language" id="lang_ru" 
+                                       value="ru" {% if language == 'ru' %}checked{% endif %}>
                                 <label class="form-check-label" for="lang_ru">
                                     🇷🇺 Русский
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="language" id="lang_en" value="en" {% if language == 'en' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="language" id="lang_en" 
+                                       value="en" {% if language == 'en' %}checked{% endif %}>
                                 <label class="form-check-label" for="lang_en">
                                     🇬🇧 English
                                 </label>
@@ -138,25 +80,29 @@ function showMessage(message, type) {
                         <div class="mb-4">
                             <h5>📏 Размер шрифта</h5>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="font_size" id="size_small" value="small" {% if font_size == 'small' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="font_size" id="size_small" 
+                                       value="small" {% if font_size == 'small' %}checked{% endif %}>
                                 <label class="form-check-label" for="size_small">
                                     Маленький шрифт
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="font_size" id="size_normal" value="normal" {% if font_size == 'normal' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="font_size" id="size_normal" 
+                                       value="normal" {% if font_size == 'normal' %}checked{% endif %}>
                                 <label class="form-check-label" for="size_normal">
                                     Обычный шрифт (по умолчанию)
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="font_size" id="size_large" value="large" {% if font_size == 'large' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="font_size" id="size_large" 
+                                       value="large" {% if font_size == 'large' %}checked{% endif %}>
                                 <label class="form-check-label" for="size_large">
                                     Большой шрифт
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="font_size" id="size_xlarge" value="xlarge" {% if font_size == 'xlarge' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="font_size" id="size_xlarge" 
+                                       value="xlarge" {% if font_size == 'xlarge' %}checked{% endif %}>
                                 <label class="form-check-label" for="size_xlarge">
                                     Очень большой шрифт
                                 </label>
@@ -166,15 +112,19 @@ function showMessage(message, type) {
                         <div class="mb-4">
                             <h5>🎨 Тема оформления</h5>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="theme" id="theme_light" value="light" {% if theme == 'light' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="theme" id="theme_light" 
+                                       value="light" {% if theme == 'light' %}checked{% endif %}
+                                       onchange="handleThemeChange(this)">
                                 <label class="form-check-label" for="theme_light">
-                                    Светлая тема
+                                    <i class="bi bi-sun"></i> Светлая тема
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="theme" id="theme_dark" value="dark" {% if theme == 'dark' %}checked{% endif %}>
+                                <input class="form-check-input" type="radio" name="theme" id="theme_dark" 
+                                       value="dark" {% if theme == 'dark' %}checked{% endif %}
+                                       onchange="handleThemeChange(this)">
                                 <label class="form-check-label" for="theme_dark">
-                                    Темная тема
+                                    <i class="bi bi-moon"></i> Темная тема
                                 </label>
                             </div>
                         </div>
@@ -182,13 +132,15 @@ function showMessage(message, type) {
                         <div class="mb-4">
                             <h5>🔔 Уведомления</h5>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="notifications_email" checked>
+                                <input class="form-check-input" type="checkbox" name="notifications_email" 
+                                       id="notifications_email" {% if notifications_email %}checked{% endif %}>
                                 <label class="form-check-label" for="notifications_email">
                                     Email уведомления
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="notifications_system" checked>
+                                <input class="form-check-input" type="checkbox" name="notifications_system" 
+                                       id="notifications_system" {% if notifications_system %}checked{% endif %}>
                                 <label class="form-check-label" for="notifications_system">
                                     Системные уведомления
                                 </label>
@@ -196,12 +148,9 @@ function showMessage(message, type) {
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary">
-                                ✅ Сохранить настройки
-                            </button>
-                            <a href="{% url 'settings' %}" class="btn btn-outline-secondary">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetSettings()">
                                 Сбросить
-                            </a>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -224,4 +173,48 @@ function showMessage(message, type) {
         </div>
     </div>
 </div>
+
+<script>
+function handleThemeChange(radio) {
+    if (radio.checked) {
+        const newTheme = radio.value;
+        // Немедленно применяем тему без отправки формы
+        updateTheme(newTheme);
+        saveThemeToServer(newTheme);
+    }
+}
+
+function resetSettings() {
+    // Сброс к значениям по умолчанию
+    document.querySelector('input[name="language"][value="ru"]').checked = true;
+    document.querySelector('input[name="font_size"][value="normal"]').checked = true;
+    document.querySelector('input[name="theme"][value="light"]').checked = true;
+    
+    // Применяем сброшенные значения
+    updateTheme('light');
+    updateFontSize('normal');
+    
+    // Сохраняем на сервере
+    const formData = new FormData(document.getElementById('settings-form'));
+    formData.set('language', 'ru');
+    formData.set('font_size', 'normal');
+    formData.set('theme', 'light');
+    
+    fetch('{% url 'settings' %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        showMessage('Настройки сброшены к значениям по умолчанию!', 'success');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Ошибка при сбросе настроек', 'danger');
+    });
+}
+</script>
 {% endblock %}

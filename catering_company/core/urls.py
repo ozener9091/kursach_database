@@ -27,6 +27,7 @@ urlpatterns = [
     path('help/about/', views.about_app, name='about_app'),
     path('miscellaneous/', views.miscellaneous_page, name='miscellaneous'),
     path('settings/', views.settings_page, name='settings'),
+    path('update-theme/', views.update_theme, name='update_theme'),
     path('change-password/', views.change_password, name='change_password'),
     path('analytics/', views.analytics_dashboard, name='analytics'),
 ]

@@ -6,9 +6,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Система управления рестораном{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        /* Стили для фиксации футера внизу страницы */
+        :root {
+            --body-bg: #ffffff;
+            --body-color: #212529;
+            --card-bg: #ffffff;
+            --card-color: #212529;
+            --header-bg: #343a40;
+            --footer-bg: #343a40;
+        }
+
+        [data-bs-theme="dark"] {
+            --body-bg: #212529;
+            --body-color: #f8f9fa;
+            --card-bg: #2c3034;
+            --card-color: #f8f9fa;
+            --header-bg: #1a1d20;
+            --footer-bg: #1a1d20;
+        }
+
+        body {
+            background-color: var(--body-bg);
+            color: var(--body-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .navbar-dark.bg-dark {
+            background-color: var(--header-bg) !important;
+        }
+
+        .footer.bg-dark {
+            background-color: var(--footer-bg) !important;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            color: var(--card-color);
+            border-color: rgba(0, 0, 0, 0.125);
+        }
+
+        [data-bs-theme="dark"] .card {
+            border-color: #495057;
+        }
+        
+        /* Стили для фиксации футера */
         html, body {
             height: 100%;
         }
@@ -22,9 +64,20 @@
         .footer {
             flex-shrink: 0;
         }
+        
+        /* Стили для размера шрифта */
+        body.font-small {
+            font-size: 14px;
+        }
+        body.font-large {
+            font-size: 18px;
+        }
+        body.font-xlarge {
+            font-size: 20px;
+        }
     </style>
 </head>
-<body class="{{ current_font_class }}">
+<body class="{{ current_font_class }}" data-theme="{{ theme }}">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">🍽️ Ресторан</a>
@@ -32,6 +85,16 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <button class="btn btn-link nav-link theme-toggle" onclick="toggleTheme()" title="Сменить тему">
+                                <i class="bi {% if theme == 'dark' %}bi-sun{% else %}bi-moon{% endif %}"></i>
+                            </button>
+                        </li>
+                    {% endif %}
+                </ul>
+                
                 <ul class="navbar-nav me-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
@@ -59,6 +122,7 @@
                         </li>
                     {% endif %}
                 </ul>
+                
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
@@ -133,7 +197,122 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+    <script>
+        window.toggleTheme = function() {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            updateTheme(newTheme);
+            saveThemeToServer(newTheme);
+        };
+        
+        window.updateTheme = function(theme) {
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.body.setAttribute('data-theme', theme);
+            
+            // Обновляем иконку
+            const icon = document.querySelector('.theme-toggle i');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon';
+            }
+            localStorage.setItem('theme', theme);
+        };
+        
+        window.saveThemeToServer = function(theme) {
+            fetch('{% url "update_theme" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ theme: theme })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Тема сохранена на сервере:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка сохранения темы:', error);
+            });
+        };
+        
+        window.updateFontSize = function(newSize) {
+            const body = document.body;
+            body.classList.remove('font-small', 'font-large', 'font-xlarge');
+            
+            switch(newSize) {
+                case 'small':
+                    body.classList.add('font-small');
+                    break;
+                case 'large':
+                    body.classList.add('font-large');
+                    break;
+                case 'xlarge':
+                    body.classList.add('font-xlarge');
+                    break;
+                default:
+            }
+            
+            localStorage.setItem('fontSize', newSize);
+        };
+        
+        function getCSRFToken() {
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput) {
+                return csrfInput.value;
+            }
+            
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+        }
+        
+        window.showMessage = function(message, type = 'info') {
+            // Создаем уведомление
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                max-width: 500px;
+            `;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Автоматическое скрытие
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            const serverTheme = '{{ theme }}';
+            
+            const themeToApply = savedTheme || serverTheme || 'light';
+            
+            if (savedTheme && savedTheme !== serverTheme) {
+                saveThemeToServer(savedTheme);
+            }
+            
+            updateTheme(themeToApply);
+            const savedFontSize = localStorage.getItem('fontSize') || 'normal';
+            updateFontSize(savedFontSize);
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
     {% block scripts %}{% endblock %}
 </body>
 </html>

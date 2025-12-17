@@ -53,7 +53,7 @@ class DishForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Если это редактирование существующего объекта
+        self.fields['image'].required = False
         if self.instance and self.instance.pk:
             self.fields['ingredients'].initial = self.instance.ingredients.all()
 

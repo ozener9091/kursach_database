@@ -4,7 +4,7 @@ from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-(4(s3#l-8f_%5o^803hgf$ilvmcykeqnd44^qgs8!5ts5g5j%x'
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 
@@ -114,3 +114,4 @@ MESSAGE_TAGS = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
+CSRF_FAILURE_VIEW = 'core.views.custom_403' 

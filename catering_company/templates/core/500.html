@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Внутренняя ошибка сервера{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <div class="display-1 text-danger mb-4">500</div>
+                    <h2 class="text-danger mb-3">Внутренняя ошибка сервера</h2>
+                    <p class="lead mb-4">
+                        Произошла ошибка на сервере. Пожалуйста, попробуйте позже.
+                    </p>
+                    <div class="mb-4">
+                        <p class="mb-2">Возможные причины ошибки:</p>
+                        <ul class="list-unstyled text-start d-inline-block">
+                            <li>• Ошибка в базе данных</li>
+                            <li>• Проблема с соединением с БД</li>
+                            <li>• Ошибка в коде приложения</li>
+                            <li>• Превышено время ожидания запроса</li>
+                            <li>• Недостаточно памяти или ресурсов сервера</li>
+                        </ul>
+                    </div>
+                    <div class="btn-group">
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                            🏠 Перейти на главную
+                        </a>
+                    </div>
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            Если проблема продолжается, пожалуйста, свяжитесь с технической поддержкой.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

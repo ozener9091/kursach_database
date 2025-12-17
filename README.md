@@ -413,7 +413,7 @@
 
 **Контакты для связи:**
 - Email: ruberlep34@bk.ru
-- GitHub: https://github.com/ozener9091](https://github.com/ozener9091)
+- GitHub: https://github.com/ozener9091
 - Telegram: Ironichniy_coffee
 
 **Для получения дополнительной информации или сообщения об ошибках:**

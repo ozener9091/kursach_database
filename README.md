@@ -105,7 +105,8 @@
 7. Бэкап базы данных
    Создайте в pgAdmin4 новую базу данных с названием catering_company
    ```bash
-   cmd /c "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d catering_company -f backup.sql
+   cmd /c "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d catering_company -f backup.sql # Windows
+   psql -U postgres -h localhost -p 5432 -d catering_company < backup.sql  # Linux
 8. Выполнение миграций
    ```bash
    python manage.py migrate
